@@ -92,7 +92,8 @@ export default function DuelGame({ members, onAwardDistance, onClose }: Props) {
   const [drinking, setDrinking] = useState(false)
   const [startTime, setStartTime] = useState<number>(0)
   const [elapsed, setElapsed] = useState(0)
-  const [cat, setCat] = useState("Shots")
+  const [p1Cat, setP1Cat] = useState("Shots")
+  const [p2Cat, setP2Cat] = useState("Shots")
   const intervalRef = useRef<any>(null)
   const lightsRef = useRef<any>(null)
 
@@ -174,9 +175,9 @@ export default function DuelGame({ members, onAwardDistance, onClose }: Props) {
 
   const fmt = (ms: number) => `${(ms / 1000).toFixed(2)}s`
 
-  const PlayerSetup = ({ player, setPlayer, userId, setUserId, label }: any) => {
+  const PlayerSetup = ({ player, setPlayer, userId, setUserId, label, playerCat, setPlayerCat }: any) => {
     const base = DRINK_CATALOG.find(d => d.id === player.drinkId)
-    const filteredDrinks = DRINK_CATALOG.filter(d => d.category === cat)
+    const filteredDrinks = DRINK_CATALOG.filter(d => d.category === playerCat)
     return (
       <div style={{ background:"#13131f",borderRadius:14,padding:14,border:"1px solid #2a2a3e",marginBottom:12 }}>
         <div style={{ fontSize:11,fontWeight:700,color:"#6b7280",letterSpacing:1,textTransform:"uppercase" as const,marginBottom:10 }}>{label}</div>
@@ -186,10 +187,15 @@ export default function DuelGame({ members, onAwardDistance, onClose }: Props) {
           <option value="">Choisir un joueur</option>
           {members.map((m:any) => <option key={m.user_id} value={m.user_id}>{m.pseudo}</option>)}
         </select>
-        {/* Drink category */}
+        {/* Drink category — each player has their own */}
         <div style={{ display:"flex",gap:6,marginBottom:10,overflowX:"auto" as const }}>
           {DRINK_CATEGORIES.map(c => (
-            <button key={c} onClick={() => setCat(c)} style={{ padding:"4px 10px",borderRadius:16,border:"none",cursor:"pointer",whiteSpace:"nowrap" as const,background:cat===c?"linear-gradient(135deg,#a855f7,#ec4899)":"#1e1e2e",color:cat===c?"#fff":"#6b7280",fontSize:10,fontWeight:cat===c?700:400 }}>{c}</button>
+            <button key={c} onClick={() => {
+              setPlayerCat(c)
+              // Auto-select first drink of new category
+              const first = DRINK_CATALOG.find(d => d.category === c)
+              if (first) setPlayer((p:any) => ({ ...p, drinkId: first.id, vol_cl: first.volumes[0] }))
+            }} style={{ padding:"4px 10px",borderRadius:16,border:"none",cursor:"pointer",whiteSpace:"nowrap" as const,background:playerCat===c?"linear-gradient(135deg,#a855f7,#ec4899)":"#1e1e2e",color:playerCat===c?"#fff":"#6b7280",fontSize:10,fontWeight:playerCat===c?700:400 }}>{c}</button>
           ))}
         </div>
         {/* Drink select */}
@@ -199,11 +205,12 @@ export default function DuelGame({ members, onAwardDistance, onClose }: Props) {
         }} style={{ width:"100%",padding:"10px 12px",borderRadius:10,background:"#1e1e2e",border:"1px solid #2a2a3e",color:"#e2e8f0",fontSize:13,marginBottom:8,outline:"none" }}>
           {filteredDrinks.map(d => <option key={d.id} value={d.id}>{d.emoji} {d.name} ({d.degree_pct}%)</option>)}
         </select>
-        {/* Volume */}
-        {base && (
+        {/* Volume — always shown, all categories */}
+        {base && base.volumes.length > 1 && (
           <div style={{ display:"flex",gap:6,flexWrap:"wrap" as const }}>
             {base.volumes.map(v => (
-              <button key={v} onClick={() => setPlayer((p:any) => ({ ...p, vol_cl: v }))} style={{ padding:"6px 12px",borderRadius:10,border:"none",cursor:"pointer",background:player.vol_cl===v?"linear-gradient(135deg,#a855f720,#ec489920)":"#1e1e2e",outline:player.vol_cl===v?"2px solid #a855f7":"2px solid transparent",color:"#e2e8f0",fontSize:12,fontWeight:player.vol_cl===v?700:400 }}>
+              <button key={v} onClick={() => setPlayer((p:any) => ({ ...p, vol_cl: v }))}
+                style={{ padding:"6px 14px",borderRadius:10,border:"none",cursor:"pointer",background:player.vol_cl===v?"linear-gradient(135deg,#a855f720,#ec489920)":"#1e1e2e",outline:player.vol_cl===v?"2px solid #a855f7":"2px solid transparent",color:"#e2e8f0",fontSize:12,fontWeight:player.vol_cl===v?700:400 }}>
                 {v}cl
               </button>
             ))}
@@ -231,8 +238,8 @@ export default function DuelGame({ members, onAwardDistance, onClose }: Props) {
         </div>
       </div>
 
-      <PlayerSetup player={p1} setPlayer={setP1} userId={p1UserId} setUserId={setP1UserId} label="🔴 Joueur 1"/>
-      <PlayerSetup player={p2} setPlayer={setP2} userId={p2UserId} setUserId={setP2UserId} label="🔵 Joueur 2"/>
+      <PlayerSetup player={p1} setPlayer={setP1} userId={p1UserId} setUserId={setP1UserId} label="🔴 Joueur 1" playerCat={p1Cat} setPlayerCat={setP1Cat}/>
+      <PlayerSetup player={p2} setPlayer={setP2} userId={p2UserId} setUserId={setP2UserId} label="🔵 Joueur 2" playerCat={p2Cat} setPlayerCat={setP2Cat}/>
 
       <button onClick={startLights} disabled={!p1UserId || !p2UserId}
         style={{ width:"100%",padding:"16px",borderRadius:14,border:"none",cursor:p1UserId&&p2UserId?"pointer":"not-allowed",background:p1UserId&&p2UserId?"linear-gradient(135deg,#a855f7,#ec4899)":"#2a2a3e",color:p1UserId&&p2UserId?"#fff":"#6b7280",fontSize:16,fontWeight:700,fontFamily:"'Space Grotesk',sans-serif" }}>
