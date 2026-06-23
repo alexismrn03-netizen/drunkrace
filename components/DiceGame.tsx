@@ -7,128 +7,103 @@ type Phase = "setup" | "rolling" | "result"
 const COLORS = ["#c084fc","#ec4899","#fbbf24","#4ade80","#60a5fa","#f87171"]
 
 // ── 3D CSS DICE ───────────────────────────────────────────────────────────────
-const FACE_ROTATIONS: Record<number, string> = {
-  1: "rotateY(0deg)",
-  2: "rotateY(-90deg)",
-  3: "rotateX(-90deg)",
-  4: "rotateX(90deg)",
-  5: "rotateY(90deg)",
-  6: "rotateY(180deg)",
+// Standard die layout (opposite faces sum to 7):
+// 1 opposite 6, 2 opposite 5, 3 opposite 4
+// Placement: 1=front, 6=back, 2=left, 5=right, 3=top, 4=bottom
+
+const DOTS: Record<number, [number,number][]> = {
+  1: [[50,50]],
+  2: [[28,28],[72,72]],
+  3: [[28,28],[50,50],[72,72]],
+  4: [[28,28],[72,28],[28,72],[72,72]],
+  5: [[28,28],[72,28],[50,50],[28,72],[72,72]],
+  6: [[28,25],[72,25],[28,50],[72,50],[28,75],[72,75]],
 }
 
-const DOT_POSITIONS: Record<number, { top: string, left: string }[]> = {
-  1: [{ top:"50%", left:"50%" }],
-  2: [{ top:"22%", left:"22%" }, { top:"78%", left:"78%" }],
-  3: [{ top:"22%", left:"22%" }, { top:"50%", left:"50%" }, { top:"78%", left:"78%" }],
-  4: [{ top:"22%", left:"22%" }, { top:"22%", left:"78%" }, { top:"78%", left:"22%" }, { top:"78%", left:"78%" }],
-  5: [{ top:"22%", left:"22%" }, { top:"22%", left:"78%" }, { top:"50%", left:"50%" }, { top:"78%", left:"22%" }, { top:"78%", left:"78%" }],
-  6: [{ top:"22%", left:"22%" }, { top:"22%", left:"78%" }, { top:"50%", left:"22%" }, { top:"50%", left:"78%" }, { top:"78%", left:"22%" }, { top:"78%", left:"78%" }],
+// Target rotations so each face number appears front-facing to viewer
+// CSS 3D: positive rotateX tilts top away, positive rotateY turns right
+const FACE_ROTS: Record<number,{x:number,y:number}> = {
+  1: { x:  0, y:   0 }, // front face
+  2: { x:  0, y:  90 }, // left face rotated to front
+  3: { x:-90, y:   0 }, // top face rotated to front
+  4: { x: 90, y:   0 }, // bottom face rotated to front
+  5: { x:  0, y: -90 }, // right face rotated to front
+  6: { x:  0, y: 180 }, // back face rotated to front
 }
 
-function Dice3D({ value, rolling, color = "#a855f7", size = 100 }: { value: number, rolling: boolean, color?: string, size?: number }) {
-  const [rotation, setRotation] = useState({ x: 0, y: 0, z: 0 })
+function Dice3D({ value, rolling, size = 110 }: { value: number, rolling: boolean, size?: number }) {
+  const [rx, setRx] = useState(0)
+  const [ry, setRy] = useState(0)
+  const [rz, setRz] = useState(0)
   const frameRef = useRef<any>(null)
-  const startRef = useRef<number>(0)
+  const startRef = useRef(0)
+  const half = size / 2
+  const dot = size * 0.12
 
   useEffect(() => {
     if (rolling) {
-      startRef.current = Date.now()
-      const animate = () => {
-        const t = (Date.now() - startRef.current) / 1000
-        setRotation({
-          x: t * 370 + Math.sin(t * 6.3) * 55,
-          y: t * 450 + Math.cos(t * 4.7) * 75,
-          z: t * 180 + Math.sin(t * 2.9) * 40,
-        })
-        frameRef.current = requestAnimationFrame(animate)
+      startRef.current = performance.now()
+      // Pick random extra full rotations so landing is unpredictable
+      const extraX = (Math.floor(Math.random()*4)+3)*360
+      const extraY = (Math.floor(Math.random()*4)+3)*360
+      const animate = (now: number) => {
+        const t = (now - startRef.current) / 1400 // 1.4s animation
+        if (t < 1) {
+          // Ease in-out spin
+          const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t
+          setRx(extraX * ease + Math.sin(t*13)*15)
+          setRy(extraY * ease + Math.cos(t*11)*20)
+          setRz(Math.sin(t*7)*8)
+          frameRef.current = requestAnimationFrame(animate)
+        }
       }
       frameRef.current = requestAnimationFrame(animate)
     } else {
       cancelAnimationFrame(frameRef.current)
-      // Map value to rotation that correctly shows that face
-      // Face layout: 1=front(Z+), 6=back(Z-), 2=right(X+), 5=left(X-), 4=top(Y-), 3=bottom(Y+)
-      // To show face N on front: rotate so face N faces viewer
-      const faceMap: Record<number, {x:number,y:number,z:number}> = {
-        1: { x:0,   y:0,    z:0 },   // face 1 already faces front
-        2: { x:0,   y:-90,  z:0 },   // rotate left so face2(right) faces front  
-        3: { x:90,  y:0,    z:0 },   // rotate up so face3(bottom) faces front
-        4: { x:-90, y:0,    z:0 },   // rotate down so face4(top) faces front
-        5: { x:0,   y:90,   z:0 },   // rotate right so face5(left) faces front
-        6: { x:0,   y:180,  z:0 },   // rotate 180 so face6(back) faces front
-      }
-      const target = faceMap[value] || faceMap[1]
-      setRotation(target)
+      const target = FACE_ROTS[value] || FACE_ROTS[1]
+      setRx(target.x)
+      setRy(target.y)
+      setRz(0)
     }
     return () => cancelAnimationFrame(frameRef.current)
   }, [rolling, value])
 
-  const half = size / 2
-
-  const FaceDots = ({ face }: { face: number }) => (
-    <div style={{ position:"relative", width:"100%", height:"100%" }}>
-      {(DOT_POSITIONS[face] || []).map((pos, i) => (
-        <div key={i} style={{
-          position:"absolute",
-          width: size * 0.14,
-          height: size * 0.14,
-          borderRadius:"50%",
-          background: face === 1 ? "#ef4444" : "#1a1a2e",
-          top: pos.top,
-          left: pos.left,
-          transform:"translate(-50%,-50%)",
-          boxShadow: face === 1 ? "0 0 4px #ef444480" : "inset 0 1px 0 rgba(255,255,255,0.1)",
-        }}/>
-      ))}
+  const Face = ({ face, transform }: { face: number, transform: string }) => (
+    <div style={{
+      position: "absolute",
+      width: size, height: size,
+      background: "#fff",
+      border: "2px solid #ddd",
+      borderRadius: size * 0.1,
+      transform,
+      backfaceVisibility: "hidden",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.06)",
+    }}>
+      <svg width={size*0.82} height={size*0.82} viewBox="0 0 100 100">
+        {(DOTS[face]||[]).map(([cx,cy],i) => (
+          <circle key={i} cx={cx} cy={cy} r={9.5} fill="#1a1a1a"/>
+        ))}
+        {/* Red dot for face 1 */}
+        {face === 1 && <circle cx={50} cy={50} r={9.5} fill="#dc2626"/>}
+      </svg>
     </div>
   )
 
-  const faceStyle = (bg: string): React.CSSProperties => ({
-    position:"absolute",
-    width:size,
-    height:size,
-    background:bg,
-    border:`2px solid ${color}60`,
-    borderRadius:size*0.12,
-    display:"flex",
-    alignItems:"center",
-    justifyContent:"center",
-    padding:size*0.1,
-    boxSizing:"border-box",
-  })
-
   return (
-    <div style={{ width:size, height:size, perspective:size*4, perspectiveOrigin:"50% 50%", cursor:"pointer" }}>
+    <div style={{ width:size, height:size, perspective:size*5 }}>
       <div style={{
-        width:size, height:size,
-        position:"relative",
+        width:size, height:size, position:"relative",
         transformStyle:"preserve-3d",
-        transform:`rotateX(${rotation.x}deg) rotateY(${rotation.y}deg) rotateZ(${rotation.z}deg)`,
-        transition: rolling ? "none" : "transform 0.6s cubic-bezier(.34,1.2,.64,1)",
+        transform:`rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg)`,
+        transition: rolling ? "none" : "transform 0.55s cubic-bezier(.25,.8,.25,1)",
       }}>
-        {/* Face 1 — front */}
-        <div style={{ ...faceStyle(`linear-gradient(135deg,${color}33,${color}11)`), transform:`translateZ(${half}px)` }}>
-          <FaceDots face={1}/>
-        </div>
-        {/* Face 6 — back */}
-        <div style={{ ...faceStyle(`linear-gradient(135deg,${color}33,${color}11)`), transform:`rotateY(180deg) translateZ(${half}px)` }}>
-          <FaceDots face={6}/>
-        </div>
-        {/* Face 2 — right */}
-        <div style={{ ...faceStyle(`linear-gradient(135deg,${color}2a,${color}0d)`), transform:`rotateY(90deg) translateZ(${half}px)` }}>
-          <FaceDots face={2}/>
-        </div>
-        {/* Face 5 — left */}
-        <div style={{ ...faceStyle(`linear-gradient(135deg,${color}2a,${color}0d)`), transform:`rotateY(-90deg) translateZ(${half}px)` }}>
-          <FaceDots face={5}/>
-        </div>
-        {/* Face 4 — top */}
-        <div style={{ ...faceStyle(`linear-gradient(135deg,${color}20,${color}08)`), transform:`rotateX(90deg) translateZ(${half}px)` }}>
-          <FaceDots face={4}/>
-        </div>
-        {/* Face 3 — bottom */}
-        <div style={{ ...faceStyle(`linear-gradient(135deg,${color}20,${color}08)`), transform:`rotateX(-90deg) translateZ(${half}px)` }}>
-          <FaceDots face={3}/>
-        </div>
+        <Face face={1} transform={`translateZ(${half}px)`}/>
+        <Face face={6} transform={`rotateY(180deg) translateZ(${half}px)`}/>
+        <Face face={2} transform={`rotateY(-90deg) translateZ(${half}px)`}/>
+        <Face face={5} transform={`rotateY(90deg) translateZ(${half}px)`}/>
+        <Face face={3} transform={`rotateX(90deg) translateZ(${half}px)`}/>
+        <Face face={4} transform={`rotateX(-90deg) translateZ(${half}px)`}/>
       </div>
     </div>
   )
@@ -136,14 +111,62 @@ function Dice3D({ value, rolling, color = "#a855f7", size = 100 }: { value: numb
 
 function playDiceSound() {
   try {
-    const ctx = new ((window as any).AudioContext || (window as any).webkitAudioContext)()
-    ;[0,0.08,0.16].forEach(d=>{
-      const o=ctx.createOscillator(),g=ctx.createGain()
-      o.connect(g);g.connect(ctx.destination);o.type="square"
-      o.frequency.setValueAtTime(200+Math.random()*100,ctx.currentTime+d)
-      g.gain.setValueAtTime(0.08,ctx.currentTime+d);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+d+0.12)
-      o.start(ctx.currentTime+d);o.stop(ctx.currentTime+d+0.12)
+    const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext
+    const ctx = new AudioCtx()
+    if (ctx.state === "suspended") ctx.resume()
+
+    const now = ctx.currentTime
+
+    // Rolling rattle: multiple short noise bursts
+    ;[0, 0.12, 0.27, 0.45, 0.65, 0.88, 1.05, 1.18].forEach((delay, i) => {
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.06, ctx.sampleRate)
+      const data = buf.getChannelData(0)
+      for (let j = 0; j < data.length; j++) data[j] = (Math.random()*2-1) * Math.exp(-j/800)
+      const src = ctx.createBufferSource()
+      src.buffer = buf
+      const gain = ctx.createGain()
+      const filter = ctx.createBiquadFilter()
+      filter.type = "bandpass"
+      filter.frequency.value = 800 + Math.random() * 1200
+      filter.Q.value = 0.8
+      src.connect(filter); filter.connect(gain); gain.connect(ctx.destination)
+      // Quieter at start and end, louder in middle
+      const vol = i < 3 ? 0.08 + i*0.04 : i < 6 ? 0.2 : 0.2 - (i-6)*0.08
+      gain.gain.setValueAtTime(vol, now + delay)
+      gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.07)
+      src.start(now + delay); src.stop(now + delay + 0.07)
     })
+
+    // Final thud when dice lands
+    const thudTime = now + 1.3
+    const thudBuf = ctx.createBuffer(1, ctx.sampleRate * 0.15, ctx.sampleRate)
+    const thudData = thudBuf.getChannelData(0)
+    for (let j = 0; j < thudData.length; j++) {
+      thudData[j] = (Math.random()*2-1) * Math.exp(-j/1200) * 0.6
+    }
+    const thudSrc = ctx.createBufferSource()
+    thudSrc.buffer = thudBuf
+    const thudFilter = ctx.createBiquadFilter()
+    thudFilter.type = "lowpass"
+    thudFilter.frequency.value = 400
+    const thudGain = ctx.createGain()
+    thudSrc.connect(thudFilter); thudFilter.connect(thudGain); thudGain.connect(ctx.destination)
+    thudGain.gain.setValueAtTime(0.5, thudTime)
+    thudGain.gain.exponentialRampToValueAtTime(0.001, thudTime + 0.18)
+    thudSrc.start(thudTime); thudSrc.stop(thudTime + 0.2)
+
+    // Short click on impact
+    const clickTime = thudTime + 0.01
+    const clickOsc = ctx.createOscillator()
+    const clickGain = ctx.createGain()
+    clickOsc.connect(clickGain); clickGain.connect(ctx.destination)
+    clickOsc.type = "sine"
+    clickOsc.frequency.setValueAtTime(180, clickTime)
+    clickOsc.frequency.exponentialRampToValueAtTime(60, clickTime + 0.08)
+    clickGain.gain.setValueAtTime(0.3, clickTime)
+    clickGain.gain.exponentialRampToValueAtTime(0.001, clickTime + 0.1)
+    clickOsc.start(clickTime); clickOsc.stop(clickTime + 0.1)
+
   } catch(e){}
 }
 
@@ -165,6 +188,7 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
   const [playerRolls, setPlayerRolls] = useState<Record<string,number|null>>({})
   const [localTurn, setLocalTurn] = useState(0)
   const [isRolling, setIsRolling] = useState(false)
+  const [pendingValue, setPendingValue] = useState<Record<string,number>>({})
   const [phase, setPhase] = useState<Phase>(invite ? "rolling" : "setup")
   const [losers, setLosers] = useState<string[]>([])
   const [tieRound, setTieRound] = useState(false)
@@ -215,13 +239,18 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
   const rollLocal = async (userId: string) => {
     if (isRolling || playerRolls[userId] != null) return
     playDiceSound(); setIsRolling(true)
-    await new Promise(r => setTimeout(r, 1400))
     const val = Math.ceil(Math.random() * 6)
+    // Wait for roll animation
+    await new Promise(r => setTimeout(r, 1400))
+    // Set pending so die snaps to correct face
+    setPendingValue(prev => ({ ...prev, [userId]: val }))
     setIsRolling(false)
+    // Extra pause so player can READ the face before score number appears
+    await new Promise(r => setTimeout(r, 900))
     setPlayerRolls(prev => {
       const next = { ...prev, [userId]: val }
       const allDone = gamePlayers.every(p => next[p.userId] != null)
-      if (allDone) setTimeout(() => computeResult(next, gamePlayers.map(p=>p.userId)), 500)
+      if (allDone) setTimeout(() => computeResult(next, gamePlayers.map(p=>p.userId)), 600)
       else setLocalTurn(t => t + 1)
       return next
     })
@@ -230,9 +259,10 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
   const rollRemote = async () => {
     if (isRolling || playerRolls[myUserId] != null) return
     playDiceSound(); setIsRolling(true)
-    await new Promise(r => setTimeout(r, 1400))
     const val = Math.ceil(Math.random() * 6)
+    await new Promise(r => setTimeout(r, 1400))
     setIsRolling(false)
+    await new Promise(r => setTimeout(r, 700))
     const { data: current } = await supabase.from("game_invites").select("game_data").eq("id", inviteId).single()
     const currentRolls = current?.game_data?.rolls || {}
     const newRolls = { ...currentRolls, [myUserId]: val }
@@ -345,7 +375,7 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
                 {currentPlayer?.name}
               </div>
               <button onClick={()=>rollLocal(currentPlayer?.userId)} disabled={isRolling} style={{ background:"none", border:"none", cursor:"pointer", padding:0 }}>
-                <Dice3D value={currentRoll||1} rolling={currentRolling} color={currentPlayer?.color} size={130}/>
+                <Dice3D value={pendingValue[currentPlayer?.userId] || currentRoll||1} rolling={currentRolling} size={130}/>
               </button>
               {!isRolling && currentRoll == null && (
                 <button onClick={()=>rollLocal(currentPlayer?.userId)}
@@ -362,7 +392,7 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
             <div style={{ width:"100%", maxWidth:360, display:"flex", flexDirection:"column" as const, gap:8 }}>
               {gamePlayers.filter(p=>p.userId!==currentPlayer?.userId).map(p=>(
                 <div key={p.userId} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderRadius:12, background:"#13131f", border:"1px solid #2a2a3e" }}>
-                  <Dice3D value={playerRolls[p.userId]||1} rolling={false} color={p.color} size={36}/>
+                  <Dice3D value={playerRolls[p.userId]||1} rolling={false}  size={36}/>
                   <span style={{ flex:1, fontSize:12, color:"#9ca3af" }}>{p.name}</span>
                   {playerRolls[p.userId] != null
                     ? <span style={{ fontFamily:"'Bebas Neue',cursive", fontSize:22, color:p.color }}>{playerRolls[p.userId]}</span>
@@ -389,7 +419,7 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
         <div style={{ display:"flex", flexDirection:"column" as const, alignItems:"center", gap:16, marginBottom:32 }}>
           <div style={{ fontSize:12, color:"#9ca3af" }}>{myRollDone?"✅ Tu as lancé !":"👆 Lance le dé !"}</div>
           <button onClick={myRollDone?undefined:rollRemote} disabled={myRollDone||isRolling} style={{ background:"none", border:"none", cursor:myRollDone?"default":"pointer", padding:0 }}>
-            <Dice3D value={playerRolls[myUserId]||1} rolling={isRolling&&!myRollDone} color={COLORS[0]} size={130}/>
+            <Dice3D value={playerRolls[myUserId]||1} rolling={isRolling&&!myRollDone}  size={130}/>
           </button>
           {playerRolls[myUserId] != null
             ? <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:56, color:COLORS[0] }}>{playerRolls[myUserId]}</div>
@@ -400,7 +430,7 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
         <div style={{ width:"100%", maxWidth:360, display:"flex", flexDirection:"column" as const, gap:8 }}>
           {gamePlayers.filter(p=>p.userId!==myUserId).map(p=>(
             <div key={p.userId} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderRadius:12, background:"#13131f", border:"1px solid #2a2a3e" }}>
-              <Dice3D value={playerRolls[p.userId]||1} rolling={false} color={p.color} size={36}/>
+              <Dice3D value={playerRolls[p.userId]||1} rolling={false}  size={36}/>
               <span style={{ flex:1, fontSize:12, color:"#9ca3af" }}>{p.name}</span>
               {playerRolls[p.userId] != null
                 ? <span style={{ fontFamily:"'Bebas Neue',cursive", fontSize:22, color:p.color }}>{playerRolls[p.userId]}</span>
@@ -439,7 +469,7 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
               const isLoser=losers.includes(p.userId)
               return (
                 <div key={p.userId} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 0", borderBottom:"1px solid #1a1a2a" }}>
-                  <Dice3D value={playerRolls[p.userId]||1} rolling={false} color={isLoser?"#ef4444":p.color} size={40}/>
+                  <Dice3D value={playerRolls[p.userId]||1} rolling={false}  size={40}/>
                   <span style={{ flex:1, fontSize:13, color:isLoser?"#f87171":"#e2e8f0", fontWeight:isLoser?700:400 }}>{p.name}</span>
                   <span style={{ fontFamily:"'Bebas Neue',cursive", fontSize:28, color:isLoser?"#ef4444":p.color }}>{playerRolls[p.userId]}</span>
                   {isLoser&&<span>💀</span>}
