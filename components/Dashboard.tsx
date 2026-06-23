@@ -17,17 +17,26 @@ export default function Dashboard({ user }: { user: any }) {
   }
 
   const loadActiveGroup = async () => {
-    // Find group where user is member and group is active
-    const { data } = await supabase
+    // Get all groups the user is a member of
+    const { data: memberships } = await supabase
       .from("group_members")
-      .select("group_id, groups(*)")
+      .select("group_id")
       .eq("user_id", user.id)
-      .eq("groups.status", "active")
-      .not("groups", "is", null)
+
+    if (!memberships || memberships.length === 0) return
+
+    const groupIds = memberships.map((m: any) => m.group_id)
+
+    // Find active group among those
+    const { data: groups } = await supabase
+      .from("groups")
+      .select("*")
+      .in("id", groupIds)
+      .eq("status", "active")
       .order("created_at", { ascending: false })
       .limit(1)
-      .single()
-    if (data?.groups) setActiveGroup(data.groups)
+
+    if (groups && groups.length > 0) setActiveGroup(groups[0])
   }
 
   useEffect(() => {

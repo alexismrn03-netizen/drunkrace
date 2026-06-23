@@ -477,25 +477,37 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
   const supabase                = createClient()
 
   const loadMembers = async () => {
-    const { data } = await supabase
+    // Step 1: get all members of this group
+    const { data: membersData, error: membersErr } = await supabase
       .from("group_members")
-      .select("*, profiles(*)")
+      .select("*")
       .eq("group_id", group.id)
-    if (!data) return
-    // Each member: merge profile data + drinks
-    const enriched = data.map((m:any) => ({
-      ...m,
-      user_id:   m.user_id,
-      pseudo:    m.profiles?.pseudo || "?",
-      avatar:    m.profiles?.avatar || "🐺",
-      weight_kg: m.profiles?.weight_kg || 70,
-      sex:       m.profiles?.sex || "M",
-      color:     m.color || "#a855f7",
-      drinks:    (m.drinks_log || []).map((id:string) => DRINK_CATALOG.find(d=>d.id===id)).filter(Boolean),
-      isMe:      m.user_id === user.id,
-      is_creator:m.is_creator,
-      youngDriver: m.young_driver || false,
-    }))
+    if (membersErr || !membersData) return
+
+    // Step 2: get profiles for those users
+    const userIds = membersData.map((m: any) => m.user_id)
+    const { data: profilesData } = await supabase
+      .from("profiles")
+      .select("*")
+      .in("id", userIds)
+
+    const profileMap: Record<string, any> = {}
+    ;(profilesData || []).forEach((p: any) => { profileMap[p.id] = p })
+
+    const enriched = membersData.map((m: any) => {
+      const prof = profileMap[m.user_id] || {}
+      return {
+        ...m,
+        pseudo:      prof.pseudo    || "?",
+        avatar:      prof.avatar    || "🐺",
+        weight_kg:   prof.weight_kg || 70,
+        sex:         prof.sex       || "M",
+        color:       m.color        || "#a855f7",
+        drinks:      (m.drinks_log  || []).map((id: string) => DRINK_CATALOG.find(d => d.id === id)).filter(Boolean),
+        isMe:        m.user_id      === user.id,
+        youngDriver: m.young_driver || false,
+      }
+    })
     setMembers(enriched)
   }
 
