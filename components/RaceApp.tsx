@@ -1,9 +1,10 @@
 "use client"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { createClient } from "@/lib/supabase"
-import { DRINK_BASES, alcoholGrams, serializeDrink, deserializeDrink, calcCurrentBAC, calcPeak, calcSoberTime, getBACStatus, fmtTime, cmToMeters, AVATARS, type DrinkEntry } from "@/lib/drinks"
+import { DRINK_BASES, alcoholGrams, serializeDrink, deserializeDrink, calcCurrentBAC, calcPeak, calcSoberTime, getBACStatus, fmtTime, cmToMeters, type DrinkEntry } from "@/lib/drinks"
 import { parseDrinksLog } from "@/lib/memberUtils"
 import DrinkTab from "./DrinkTab"
+import DrunkAvatar from "./DrunkAvatar"
 import PhotoTab from "./PhotoTab"
 
 // ── SAM WHEEL ───────────────────────────────────────────────────────────────
@@ -157,7 +158,9 @@ function RaceTrack({ members, samMember, isCreator, group, onShowWheel, onRemove
                 <div style={{ position:"absolute",right:0,top:0,bottom:0,width:6,background:"repeating-linear-gradient(180deg,#ef4444 0,#ef4444 6px,#fff 6px,#fff 12px)",borderRadius:"0 8px 8px 0" }}/>
                 {[25,50,75].map(p=><div key={p} style={{ position:"absolute",left:`${p}%`,top:0,bottom:0,width:1,background:"#ffffff12" }}/>)}
                 <div style={{ position:"absolute",left:6,top:0,bottom:0,width:`calc(${pct}% - 6px)`,background:`linear-gradient(90deg,${member.color}25,${member.color}55)`,transition:"width 0.9s cubic-bezier(.34,1.2,.64,1)",borderRadius:"0 4px 4px 0" }}/>
-                <div style={{ position:"absolute",left:`calc(${pct}% - 20px)`,top:"50%",transform:"translateY(-50%)",fontSize:24,filter:bac>1.5?"blur(1px)":"none",transition:"left 0.9s cubic-bezier(.34,1.2,.64,1)",zIndex:2 }}>{member.avatar}</div>
+                <div style={{ position:"absolute",left:`calc(${pct}% - 18px)`,top:"50%",transform:"translateY(-50%)",transition:"left 0.9s cubic-bezier(.34,1.2,.64,1)",zIndex:2 }}>
+                  <DrunkAvatar avatarIndex={parseInt(member.avatar)||0} color={member.color} bac={bac} size={36} isMe={member.isMe}/>
+                </div>
               </div>
             </div>
           )
@@ -175,7 +178,7 @@ function RaceTrack({ members, samMember, isCreator, group, onShowWheel, onRemove
           return (
             <div key={m.user_id} style={{ display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:i<sorted.length-1?"1px solid #1a1a2a":"none" }}>
               <span style={{ fontSize:18,minWidth:26 }}>{medals[i]||"·"}</span>
-              <span style={{ fontSize:20 }}>{m.avatar}</span>
+              <DrunkAvatar avatarIndex={parseInt(m.avatar)||0} color={m.color} bac={calcCurrentBAC(m.drinks,m.weight_kg,m.sex)} size={32}/>
               <div style={{ flex:1 }}>
                 <div style={{ fontWeight:600,fontSize:13,color:m.isMe?"#c084fc":"#e2e8f0" }}>{m.pseudo}</div>
                 <div style={{ fontSize:10,color:st.color }}>{st.label}</div>
@@ -319,8 +322,10 @@ function ProfileTab({ myMember, user, group, onUpdate }: any) {
       <div style={{ background:"#13131f",borderRadius:14,padding:14,border:"1px solid #2a2a3e",marginBottom:12 }}>
         <div style={{ fontSize:11,fontWeight:700,color:"#6b7280",letterSpacing:1,textTransform:"uppercase" as const,marginBottom:8 }}>Avatar</div>
         <div style={{ display:"flex",flexWrap:"wrap" as const,gap:8 }}>
-          {AVATARS.map((a:string,i:number)=>(
-            <button key={i} onClick={()=>setAvatar(a)} style={{ fontSize:26,padding:6,borderRadius:10,border:"none",cursor:"pointer",background:avatar===a?"#3b1f6a":"#1e1e2e",outline:avatar===a?"2px solid #a855f7":"2px solid transparent" }}>{a}</button>
+          {Array.from({length:12},(_,i)=>(
+            <button key={i} onClick={()=>setAvatar(String(i))} style={{ padding:4,borderRadius:10,border:"none",cursor:"pointer",background:avatar===String(i)?"#3b1f6a":"#1e1e2e",outline:avatar===String(i)?"2px solid #a855f7":"2px solid transparent" }}>
+              <DrunkAvatar avatarIndex={i} color="#a855f7" bac={0} size={40}/>
+            </button>
           ))}
         </div>
       </div>
@@ -404,37 +409,31 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
   const samMember = members.find(m=>m.is_sam)
   const isCreator = myMember?.is_creator||false
 
-  const getMyDrinksLog = () => {
-    if (!myMember) return []
-    const raw = myMember.drinks_log
-    if (!raw) return []
-    // jsonb column returns object/array directly
-    if (Array.isArray(raw)) return raw
-    // sometimes returned as string
-    if (typeof raw === "string") { try { return JSON.parse(raw) } catch { return [] } }
-    return []
-  }
-
   const handleAddDrink = async (drink: DrinkEntry) => {
     if (!myMember) return
-    const currentLog = getMyDrinksLog()
-    const newLog = [...currentLog, serializeDrink(drink)]
+    // Read current drinks from already-parsed myMember.drinks (not raw drinks_log)
+    const currentSerialized = (myMember.drinks as DrinkEntry[]).map((d: DrinkEntry) => serializeDrink(d))
+    const newLog = [...currentSerialized, serializeDrink(drink)]
     const { error } = await supabase
       .from("group_members")
       .update({ drinks_log: newLog })
       .eq("group_id", group.id)
       .eq("user_id", user.id)
-    if (error) { console.error("addDrink error:", JSON.stringify(error)); alert("Erreur: " + error.message) }
-    else loadMembers()
+    if (error) { 
+      console.error("addDrink error:", JSON.stringify(error))
+      alert("Erreur ajout: " + error.message)
+    } else {
+      loadMembers()
+    }
   }
 
   const handleUndo = async () => {
-    const currentLog = getMyDrinksLog()
-    if (!currentLog.length) return
-    const newLog = [...currentLog]; newLog.pop()
+    if (!myMember || !myMember.drinks.length) return
+    const currentSerialized = (myMember.drinks as DrinkEntry[]).map((d: DrinkEntry) => serializeDrink(d))
+    currentSerialized.pop()
     const { error } = await supabase
       .from("group_members")
-      .update({ drinks_log: newLog })
+      .update({ drinks_log: currentSerialized })
       .eq("group_id", group.id)
       .eq("user_id", user.id)
     if (error) console.error("undo error:", error)
