@@ -46,9 +46,11 @@ export default function DuelGame({ members, onAwardDistance, onClose }: Props) {
     return () => clearInterval(intervalRef.current)
   }, [drinking, startTime])
 
-  const startLights = () => {
+  const startLightsAndTimer = (targetPhase: "p1" | "p2") => {
     setPhase("lights")
     setLights(0)
+    setDrinking(false)
+    setElapsed(0)
     let count = 0
     lightsRef.current = setInterval(() => {
       count++
@@ -56,43 +58,40 @@ export default function DuelGame({ members, onAwardDistance, onClose }: Props) {
         setLights(count)
       } else {
         clearInterval(lightsRef.current)
-        // Random delay between 0.2-0.8s before GO (like real F1)
+        // Random delay 0.2-0.8s (real F1 style)
         const delay = 200 + Math.random() * 600
         setTimeout(() => {
-          setLights(-1) // GO!
-          setPhase("p1")
+          setLights(-1)
+          setPhase(targetPhase)
+          // Auto-start timer!
+          const t = Date.now()
+          setStartTime(t)
+          setDrinking(true)
         }, delay)
       }
     }, 700)
   }
 
+  const startLights = () => startLightsAndTimer("p1")
+
   const handlePress = () => {
-    if (phase === "p1") {
-      if (!drinking) {
-        // Start drinking
-        setDrinking(true)
-        setStartTime(Date.now())
-        setElapsed(0)
-      } else {
-        // Stop - done drinking
-        const time = Date.now() - startTime
-        setP1(prev => ({ ...prev, time }))
-        setDrinking(false)
-        setPhase("p2")
-        setCurrentPlayer(2)
-        setElapsed(0)
-      }
-    } else if (phase === "p2") {
-      if (!drinking) {
-        setDrinking(true)
-        setStartTime(Date.now())
-        setElapsed(0)
-      } else {
-        const time = Date.now() - startTime
-        setP2(prev => ({ ...prev, time }))
-        setDrinking(false)
-        setPhase("result")
-      }
+    if (phase === "p1" && drinking) {
+      // P1 stops
+      const time = Date.now() - startTime
+      setP1(prev => ({ ...prev, time }))
+      setDrinking(false)
+      setElapsed(time)
+      // Short pause then launch P2 lights
+      setTimeout(() => {
+        startLightsAndTimer("p2")
+      }, 1500)
+    } else if (phase === "p2" && drinking) {
+      // P2 stops
+      const time = Date.now() - startTime
+      setP2(prev => ({ ...prev, time }))
+      setDrinking(false)
+      setElapsed(time)
+      setPhase("result")
     }
   }
 
@@ -209,7 +208,7 @@ export default function DuelGame({ members, onAwardDistance, onClose }: Props) {
     </div>
   )
 
-  // ── GO LIGHTS (instant flash) ─────────────────────────────────────────────
+  // ── GO LIGHTS (brief flash before auto-start) ───────────────────────────
   if (lights === -1 && (phase === "p1" || phase === "p2") && !drinking && elapsed === 0) return (
     <div style={{ position:"fixed",inset:0,background:"#0a0a14",zIndex:400,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24 }}>
       <div style={{ background:"#111",borderRadius:20,padding:"24px 32px",border:"2px solid #1f2937",marginBottom:32 }}>
@@ -226,9 +225,9 @@ export default function DuelGame({ members, onAwardDistance, onClose }: Props) {
       <div style={{ color:"#6b7280",fontSize:14,marginTop:16 }}>
         {phase==="p1" ? `${p1.name||"Joueur 1"} — Appuie pour boire !` : `${p2.name||"Joueur 2"} — Appuie pour boire !`}
       </div>
-      <button onClick={handlePress} style={{ marginTop:40,width:"100%",maxWidth:320,padding:"24px",borderRadius:20,border:"none",cursor:"pointer",background:"linear-gradient(135deg,#4ade80,#22c55e)",color:"#fff",fontSize:22,fontWeight:700,boxShadow:"0 0 30px #4ade8060" }}>
-        🍺 BOIRE !
-      </button>
+      <div style={{ marginTop:40,fontFamily:"'Bebas Neue',cursive",fontSize:20,color:"#4ade80",letterSpacing:2,animation:"pulse 0.3s infinite alternate" }}>
+        LE TIMER DÉMARRE AUTOMATIQUEMENT !
+      </div>
       <style>{`@keyframes pulse{from{opacity:0.8}to{opacity:1}}`}</style>
     </div>
   )
@@ -249,15 +248,9 @@ export default function DuelGame({ members, onAwardDistance, onClose }: Props) {
           {fmt(elapsed)}
         </div>
 
-        {drinking ? (
-          <button onClick={handlePress} style={{ width:"100%",maxWidth:320,padding:"28px",borderRadius:20,border:"none",cursor:"pointer",background:`linear-gradient(135deg,${color},${color}cc)`,color:"#fff",fontSize:20,fontWeight:700,boxShadow:`0 0 30px ${color}60`,animation:"throb 0.4s infinite alternate" }}>
-            ✅ FINI !
-          </button>
-        ) : (
-          <button onClick={handlePress} style={{ width:"100%",maxWidth:320,padding:"28px",borderRadius:20,border:"none",cursor:"pointer",background:"linear-gradient(135deg,#4ade80,#22c55e)",color:"#fff",fontSize:20,fontWeight:700 }}>
-            🍺 BOIRE !
-          </button>
-        )}
+        <button onClick={handlePress} disabled={!drinking} style={{ width:"100%",maxWidth:320,padding:"28px",borderRadius:20,border:"none",cursor:drinking?"pointer":"not-allowed",background:drinking?`linear-gradient(135deg,${color},${color}cc)`:"#2a2a3e",color:"#fff",fontSize:20,fontWeight:700,boxShadow:drinking?`0 0 30px ${color}60`:"none",animation:drinking?"throb 0.4s infinite alternate":"none",transition:"all .2s" }}>
+          {drinking ? "✅ FINI !" : "⏳ Prépare-toi..."}
+        </button>
 
         {phase==="p2" && p1.time && (
           <div style={{ marginTop:20,color:"#6b7280",fontSize:13 }}>
