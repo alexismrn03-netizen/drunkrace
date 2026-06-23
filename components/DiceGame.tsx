@@ -38,32 +38,70 @@ function Dice3D({ value, rolling, size = 110 }: { value: number, rolling: boolea
   const frameRef = useRef<any>(null)
   const startRef = useRef(0)
   const half = size / 2
-  const dot = size * 0.12
+  // Store target rotations so we can approach them smoothly
+  const targetRef = useRef({ x: 0, y: 0 })
+  const phaseRef = useRef<"fast"|"slow"|"stop">("fast")
+  const speedRef = useRef(1.0)
 
   useEffect(() => {
     if (rolling) {
       startRef.current = performance.now()
-      // Pick random extra full rotations so landing is unpredictable
-      const extraX = (Math.floor(Math.random()*4)+3)*360
-      const extraY = (Math.floor(Math.random()*4)+3)*360
+      phaseRef.current = "fast"
+      speedRef.current = 1.0
+      // Random target face: large random rotations + final face offset
+      const face = value  // the face we need to land on
+      const target = FACE_ROTS[face] || FACE_ROTS[1]
+      // Add many full rotations so the path is long and unpredictable
+      const spinsX = (Math.floor(Math.random() * 5) + 6) * 360
+      const spinsY = (Math.floor(Math.random() * 5) + 6) * 360
+      targetRef.current = {
+        x: target.x + spinsX,
+        y: target.y + spinsY,
+      }
+
+      let curX = rx, curY = ry, curZ = rz
+      let vx = (Math.random() - 0.5) * 25
+      let vy = (Math.random() * 15) + 20
+      let vz = (Math.random() - 0.5) * 8
+
       const animate = (now: number) => {
-        const t = (now - startRef.current) / 1400 // 1.4s animation
-        if (t < 1) {
-          // Ease in-out spin
-          const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t
-          setRx(extraX * ease + Math.sin(t*13)*15)
-          setRy(extraY * ease + Math.cos(t*11)*20)
-          setRz(Math.sin(t*7)*8)
+        const elapsed = (now - startRef.current) / 1000
+        // Phase 1: fast random spin (0 - 0.9s)
+        // Phase 2: slow deceleration toward target face (0.9s - 2.0s)
+        // Phase 3: snap to exact target
+        if (elapsed < 0.9) {
+          // Fast tumbling phase
+          vx += (Math.random() - 0.5) * 2
+          vy += (Math.random() - 0.5) * 2
+          vz += (Math.random() - 0.5) * 1
+          curX += vx; curY += vy; curZ += vz
+          setRx(curX); setRy(curY); setRz(curZ)
           frameRef.current = requestAnimationFrame(animate)
+        } else if (elapsed < 2.2) {
+          // Deceleration phase — ease toward target
+          const t = (elapsed - 0.9) / 1.3  // 0 → 1
+          // Ease out cubic
+          const ease = 1 - Math.pow(1 - t, 3)
+          const startX = curX, startY = curY
+          const tx = targetRef.current.x
+          const ty = targetRef.current.y
+          setRx(startX + (tx - startX) * ease)
+          setRy(startY + (ty - startY) * ease)
+          // Small wobble at end like real dice bouncing
+          const wobble = Math.sin(t * 12) * (1 - t) * 4
+          setRz(wobble)
+          frameRef.current = requestAnimationFrame(animate)
+        } else {
+          // Final snap
+          const target2 = FACE_ROTS[value] || FACE_ROTS[1]
+          setRx(target2.x); setRy(target2.y); setRz(0)
         }
       }
       frameRef.current = requestAnimationFrame(animate)
     } else {
       cancelAnimationFrame(frameRef.current)
       const target = FACE_ROTS[value] || FACE_ROTS[1]
-      setRx(target.x)
-      setRy(target.y)
-      setRz(0)
+      setRx(target.x); setRy(target.y); setRz(0)
     }
     return () => cancelAnimationFrame(frameRef.current)
   }, [rolling, value])
@@ -109,63 +147,66 @@ function Dice3D({ value, rolling, size = 110 }: { value: number, rolling: boolea
   )
 }
 
+function makeNoise(ctx: AudioContext, duration: number, freq: number, vol: number, at: number) {
+  const len = Math.floor(ctx.sampleRate * duration)
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate)
+  const d = buf.getChannelData(0)
+  for (let i = 0; i < len; i++) d[i] = (Math.random()*2-1) * Math.exp(-i/(len*0.35))
+  const src = ctx.createBufferSource(); src.buffer = buf
+  const flt = ctx.createBiquadFilter(); flt.type = "bandpass"; flt.frequency.value = freq; flt.Q.value = 1.2
+  const g = ctx.createGain()
+  src.connect(flt); flt.connect(g); g.connect(ctx.destination)
+  g.gain.setValueAtTime(vol, at); g.gain.exponentialRampToValueAtTime(0.0001, at + duration)
+  src.start(at); src.stop(at + duration)
+}
+
 function playDiceSound() {
   try {
     const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext
     const ctx = new AudioCtx()
     if (ctx.state === "suspended") ctx.resume()
-
     const now = ctx.currentTime
 
-    // Rolling rattle: multiple short noise bursts
-    ;[0, 0.12, 0.27, 0.45, 0.65, 0.88, 1.05, 1.18].forEach((delay, i) => {
-      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.06, ctx.sampleRate)
-      const data = buf.getChannelData(0)
-      for (let j = 0; j < data.length; j++) data[j] = (Math.random()*2-1) * Math.exp(-j/800)
-      const src = ctx.createBufferSource()
-      src.buffer = buf
-      const gain = ctx.createGain()
-      const filter = ctx.createBiquadFilter()
-      filter.type = "bandpass"
-      filter.frequency.value = 800 + Math.random() * 1200
-      filter.Q.value = 0.8
-      src.connect(filter); filter.connect(gain); gain.connect(ctx.destination)
-      // Quieter at start and end, louder in middle
-      const vol = i < 3 ? 0.08 + i*0.04 : i < 6 ? 0.2 : 0.2 - (i-6)*0.08
-      gain.gain.setValueAtTime(vol, now + delay)
-      gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.07)
-      src.start(now + delay); src.stop(now + delay + 0.07)
+    // Phase 1: Fast rattling (0 → 0.9s) — dice rolling on surface
+    // Accelerates then has rhythm of tumbling
+    const rattleTimes = [0, 0.07, 0.14, 0.22, 0.31, 0.40, 0.50, 0.60, 0.70, 0.80]
+    rattleTimes.forEach((t, i) => {
+      const vol = 0.06 + i * 0.015 // gets louder as it settles
+      makeNoise(ctx, 0.055, 1800 + Math.random()*800, vol, now + t)
     })
 
-    // Final thud when dice lands
-    const thudTime = now + 1.3
-    const thudBuf = ctx.createBuffer(1, ctx.sampleRate * 0.15, ctx.sampleRate)
-    const thudData = thudBuf.getChannelData(0)
-    for (let j = 0; j < thudData.length; j++) {
-      thudData[j] = (Math.random()*2-1) * Math.exp(-j/1200) * 0.6
-    }
-    const thudSrc = ctx.createBufferSource()
-    thudSrc.buffer = thudBuf
-    const thudFilter = ctx.createBiquadFilter()
-    thudFilter.type = "lowpass"
-    thudFilter.frequency.value = 400
-    const thudGain = ctx.createGain()
-    thudSrc.connect(thudFilter); thudFilter.connect(thudGain); thudGain.connect(ctx.destination)
-    thudGain.gain.setValueAtTime(0.5, thudTime)
-    thudGain.gain.exponentialRampToValueAtTime(0.001, thudTime + 0.18)
-    thudSrc.start(thudTime); thudSrc.stop(thudTime + 0.2)
+    // Phase 2: Slow bouncing (0.9s → 2.2s) — die decelerating
+    const bounceTimes = [0.92, 1.08, 1.22, 1.35, 1.46, 1.55, 1.63, 1.70, 1.76]
+    bounceTimes.forEach((t, i) => {
+      const vol = Math.max(0.04, 0.18 - i * 0.016)
+      const freq = 1200 - i * 80
+      makeNoise(ctx, 0.06, freq, vol, now + t)
+    })
 
-    // Short click on impact
-    const clickTime = thudTime + 0.01
-    const clickOsc = ctx.createOscillator()
-    const clickGain = ctx.createGain()
-    clickOsc.connect(clickGain); clickGain.connect(ctx.destination)
-    clickOsc.type = "sine"
-    clickOsc.frequency.setValueAtTime(180, clickTime)
-    clickOsc.frequency.exponentialRampToValueAtTime(60, clickTime + 0.08)
-    clickGain.gain.setValueAtTime(0.3, clickTime)
-    clickGain.gain.exponentialRampToValueAtTime(0.001, clickTime + 0.1)
-    clickOsc.start(clickTime); clickOsc.stop(clickTime + 0.1)
+    // Final THUD — die hits table hard (low frequency)
+    const thud = now + 2.1
+    ;[0, 0.008, 0.02].forEach(d => {
+      const buf2 = ctx.createBuffer(1, Math.floor(ctx.sampleRate*0.18), ctx.sampleRate)
+      const data2 = buf2.getChannelData(0)
+      for (let i = 0; i < data2.length; i++) data2[i] = (Math.random()*2-1) * Math.exp(-i/1800)
+      const src2 = ctx.createBufferSource(); src2.buffer = buf2
+      const flt2 = ctx.createBiquadFilter(); flt2.type = "lowpass"; flt2.frequency.value = 250 - d*1000
+      const g2 = ctx.createGain()
+      src2.connect(flt2); flt2.connect(g2); g2.connect(ctx.destination)
+      g2.gain.setValueAtTime(0.5 - d*10, thud + d)
+      g2.gain.exponentialRampToValueAtTime(0.0001, thud + d + 0.2)
+      src2.start(thud + d); src2.stop(thud + d + 0.22)
+    })
+
+    // High-click on impact (corner of die hitting table)
+    const osc = ctx.createOscillator()
+    const og = ctx.createGain()
+    osc.connect(og); og.connect(ctx.destination)
+    osc.type = "sine"
+    osc.frequency.setValueAtTime(800, thud)
+    osc.frequency.exponentialRampToValueAtTime(120, thud + 0.06)
+    og.gain.setValueAtTime(0.25, thud); og.gain.exponentialRampToValueAtTime(0.0001, thud + 0.08)
+    osc.start(thud); osc.stop(thud + 0.1)
 
   } catch(e){}
 }
@@ -236,17 +277,23 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
     setSending(false); setPhase("rolling"); setPlayerRolls({})
   }
 
+  const trueRandom = () => {
+    const arr = new Uint32Array(1)
+    crypto.getRandomValues(arr)
+    return (arr[0] % 6) + 1
+  }
+
   const rollLocal = async (userId: string) => {
     if (isRolling || playerRolls[userId] != null) return
-    playDiceSound(); setIsRolling(true)
-    const val = Math.ceil(Math.random() * 6)
-    // Wait for roll animation
-    await new Promise(r => setTimeout(r, 1400))
-    // Set pending so die snaps to correct face
+    const val = trueRandom()
+    playDiceSound()
+    setIsRolling(true)
     setPendingValue(prev => ({ ...prev, [userId]: val }))
+    // Wait for full roll animation (2.2s)
+    await new Promise(r => setTimeout(r, 2300))
     setIsRolling(false)
-    // Extra pause so player can READ the face before score number appears
-    await new Promise(r => setTimeout(r, 900))
+    // 1.5s pause — player sees final face clearly
+    await new Promise(r => setTimeout(r, 1500))
     setPlayerRolls(prev => {
       const next = { ...prev, [userId]: val }
       const allDone = gamePlayers.every(p => next[p.userId] != null)
@@ -258,11 +305,13 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
 
   const rollRemote = async () => {
     if (isRolling || playerRolls[myUserId] != null) return
-    playDiceSound(); setIsRolling(true)
-    const val = Math.ceil(Math.random() * 6)
-    await new Promise(r => setTimeout(r, 1400))
+    const val = trueRandom()
+    playDiceSound()
+    setIsRolling(true)
+    setPendingValue(prev => ({ ...prev, [myUserId]: val }))
+    await new Promise(r => setTimeout(r, 2300))
     setIsRolling(false)
-    await new Promise(r => setTimeout(r, 700))
+    await new Promise(r => setTimeout(r, 1500))
     const { data: current } = await supabase.from("game_invites").select("game_data").eq("id", inviteId).single()
     const currentRolls = current?.game_data?.rolls || {}
     const newRolls = { ...currentRolls, [myUserId]: val }
