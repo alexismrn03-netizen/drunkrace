@@ -1,5 +1,13 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Space Grotesk', sans-serif; background: #0a0a14; color: #e2e8f0; }
+html { height: 100%; }
+body {
+  font-family: 'Space Grotesk', sans-serif;
+  background: #0a0a14;
+  color: #e2e8f0;
+  height: 100%;
+  /* Prevent content from going under tab bar */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
 ::-webkit-scrollbar { display: none; }
 input::-webkit-inner-spin-button { -webkit-appearance: none; }
 input[type=number] { -moz-appearance: textfield; }

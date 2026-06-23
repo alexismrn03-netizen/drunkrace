@@ -489,7 +489,7 @@ function ProfileTab({ myMember, user, group, onUpdate }: any) {
 function TabBar({ active, onChange }: {active:string, onChange:(t:string)=>void}) {
   const tabs=[{id:"race",label:"🏁 Piste"},{id:"drink",label:"🍺 Boire"},{id:"stats",label:"📊 Stats"},{id:"photo",label:"📸 Photos"},{id:"profile",label:"👤 Profil"}]
   return (
-    <div style={{display:"flex",position:"fixed",bottom:0,left:0,right:0,background:"#0a0a14",borderTop:"1px solid #1a1a2a",zIndex:100,maxWidth:480,margin:"0 auto"}}>
+    <div style={{display:"flex",position:"fixed",bottom:0,left:0,right:0,background:"#0a0a14",borderTop:"1px solid #1a1a2a",zIndex:1000,paddingBottom:"env(safe-area-inset-bottom, 0px)"}}>
       {tabs.map(t=>(
         <button key={t.id} onClick={()=>onChange(t.id)} style={{flex:1,padding:"10px 0 7px",background:"none",border:"none",color:active===t.id?"#c084fc":"#4b5563",fontSize:9,fontWeight:active===t.id?700:400,cursor:"pointer",display:"flex",flexDirection:"column" as const,alignItems:"center",gap:1}}>
           <span style={{fontSize:17}}>{t.label.split(" ")[0]}</span>
