@@ -1,7 +1,8 @@
 "use client"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { createClient } from "@/lib/supabase"
-import { DRINK_BASES, alcoholGrams, calcCurrentBAC, calcPeak, calcSoberTime, getBACStatus, fmtTime, cmToMeters, AVATARS, type DrinkEntry } from "@/lib/drinks"
+import { DRINK_BASES, alcoholGrams, serializeDrink, deserializeDrink, calcCurrentBAC, calcPeak, calcSoberTime, getBACStatus, fmtTime, cmToMeters, AVATARS, type DrinkEntry } from "@/lib/drinks"
+import { parseDrinksLog } from "@/lib/memberUtils"
 import DrinkTab from "./DrinkTab"
 import PhotoTab from "./PhotoTab"
 
@@ -382,13 +383,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
     ;(profilesData || []).forEach((p: any) => { profileMap[p.id] = p })
     const enriched = membersData.map((m: any) => {
       const prof = profileMap[m.user_id] || {}
-      const drinks: DrinkEntry[] = (m.drinks_log || []).map((e: any) => {
-        if (typeof e === "string") {
-          const base = DRINK_BASES.find(b => b.id === e); if (!base) return null
-          return { id: e, drinkId: base.id, name: base.name, emoji: base.emoji, vol_cl: base.volumes[0], degree_pct: base.degree_pct, alcohol_g: alcoholGrams(base.volumes[0], base.degree_pct), color: base.color, addedAt: Date.now() }
-        }
-        return e
-      }).filter(Boolean)
+      const drinks: DrinkEntry[] = parseDrinksLog(m.drinks_log)
       return { ...m, pseudo: prof.pseudo||"?", avatar: prof.avatar||"🐺", weight_kg: prof.weight_kg||70, sex: prof.sex||"M", color: m.color||"#a855f7", drinks, isMe: m.user_id===user.id, youngDriver: m.young_driver||false }
     })
     setMembers(enriched)
@@ -409,13 +404,16 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
 
   const handleAddDrink = async (drink: DrinkEntry) => {
     if (!myMember) return
-    const newLog = [...(myMember.drinks_log||[]), drink]
+    const serialized = serializeDrink(drink)
+    const currentLog = Array.isArray(myMember.drinks_log) ? myMember.drinks_log : []
+    const newLog = [...currentLog, serialized]
     await supabase.from("group_members").update({ drinks_log: newLog }).eq("group_id",group.id).eq("user_id",user.id)
     loadMembers()
   }
   const handleUndo = async () => {
-    if (!myMember?.drinks_log?.length) return
-    const newLog=[...myMember.drinks_log]; newLog.pop()
+    const currentLog = Array.isArray(myMember?.drinks_log) ? myMember.drinks_log : []
+    if (!currentLog.length) return
+    const newLog = [...currentLog]; newLog.pop()
     await supabase.from("group_members").update({ drinks_log: newLog }).eq("group_id",group.id).eq("user_id",user.id)
     loadMembers()
   }
