@@ -164,7 +164,7 @@ function RaceTrack({ members, samMember, isCreator, group, onShowWheel, onRemove
             </div>
           )
         })}
-        <div style={{ position:"absolute",right:18,top:36,bottom:16,width:6,background:"repeating-linear-gradient(180deg,#fff 0,#fff 5px,#000 5px,#000 10px)",borderRadius:2,opacity:0.6 }}/>
+
       </div>
 
       {/* Leaderboard */}
