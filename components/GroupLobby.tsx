@@ -2,10 +2,9 @@
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase"
 import QRCode from "react-qr-code"
+import FinishedRace from "./FinishedRace"
 
-function generateCode() {
-  return Math.random().toString(36).substring(2, 8).toUpperCase()
-}
+function generateCode() { return Math.random().toString(36).substring(2, 8).toUpperCase() }
 
 export default function GroupLobby({ user, profile, onJoinGroup, onProfileUpdate }: any) {
   const [groups, setGroups] = useState<any[]>([])
@@ -15,14 +14,14 @@ export default function GroupLobby({ user, profile, onJoinGroup, onProfileUpdate
   const [joinCode, setJoinCode] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [selectedRace, setSelectedRace] = useState<any>(null)
   const supabase = createClient()
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://drunkrace.vercel.app"
 
   useEffect(() => { loadGroups() }, [])
 
   const loadGroups = async () => {
-    const { data: memberships } = await supabase
-      .from("group_members").select("group_id").eq("user_id", user.id)
+    const { data: memberships } = await supabase.from("group_members").select("group_id").eq("user_id", user.id)
     if (!memberships?.length) return
     const ids = memberships.map((m: any) => m.group_id)
     const { data } = await supabase.from("groups").select("*").in("id", ids).order("created_at", { ascending: false })
@@ -38,9 +37,7 @@ export default function GroupLobby({ user, profile, onJoinGroup, onProfileUpdate
       creator_id: user.id, creator_pseudo: profile.pseudo, status: "waiting"
     }).select().single()
     if (e) { setError(e.message); setLoading(false); return }
-    await supabase.from("group_members").insert({
-      group_id: data.id, user_id: user.id, color: "#a855f7", is_creator: true
-    })
+    await supabase.from("group_members").insert({ group_id: data.id, user_id: user.id, color: "#a855f7", is_creator: true })
     setNewGroup(data); setLoading(false)
   }
 
@@ -58,24 +55,21 @@ export default function GroupLobby({ user, profile, onJoinGroup, onProfileUpdate
     const { data: existing } = await supabase.from("group_members").select("id").eq("group_id", grp.id).eq("user_id", user.id).single()
     if (!existing) {
       const colors = ["#ec4899","#38bdf8","#4ade80","#fb923c","#818cf8","#34d399","#fbbf24","#f43f5e"]
-      await supabase.from("group_members").insert({
-        group_id: grp.id, user_id: user.id,
-        color: colors[Math.floor(Math.random()*colors.length)]
-      })
+      await supabase.from("group_members").insert({ group_id: grp.id, user_id: user.id, color: colors[Math.floor(Math.random()*colors.length)] })
     }
-    if (grp.status === "active") { onJoinGroup(grp); return }
-    if (grp.status === "waiting") { setError("La course n'a pas encore démarré. Attends que le créateur lance !") }
-    else { setError("Cette soirée est terminée.") }
-    setLoading(false)
+    if (grp.status === "active" || grp.status === "waiting") { onJoinGroup(grp); return }
+    setError("Cette soirée est terminée 😔"); setLoading(false)
   }
 
   const logout = async () => { await supabase.auth.signOut() }
 
-  const S = {
-    card: { background:"#13131f",border:"1px solid #2a2a3e",borderRadius:16,padding:16,marginBottom:12 } as any,
-    input: { width:"100%",padding:"12px 14px",borderRadius:12,background:"#1e1e2e",border:"1px solid #2a2a3e",color:"#e2e8f0",fontSize:14,fontFamily:"'Space Grotesk',sans-serif",outline:"none",boxSizing:"border-box" as const,marginBottom:10 },
-    btn: (bg?: string) => ({ width:"100%",padding:"13px",borderRadius:13,border:"none",cursor:"pointer",background:bg||"linear-gradient(135deg,#a855f7,#ec4899)",color:"#fff",fontSize:14,fontWeight:700,fontFamily:"'Space Grotesk',sans-serif" } as any),
+  const S: any = {
+    card: { background:"#13131f",border:"1px solid #2a2a3e",borderRadius:16,padding:16,marginBottom:12 },
+    input: { width:"100%",padding:"12px 14px",borderRadius:12,background:"#1e1e2e",border:"1px solid #2a2a3e",color:"#e2e8f0",fontSize:14,outline:"none",boxSizing:"border-box",marginBottom:10 },
+    btn: (bg?: string, extra?: any) => ({ width:"100%",padding:"13px",borderRadius:13,border:"none",cursor:"pointer",background:bg||"linear-gradient(135deg,#a855f7,#ec4899)",color:"#fff",fontSize:14,fontWeight:700, ...extra }),
   }
+
+  if (selectedRace) return <FinishedRace race={selectedRace} onBack={() => setSelectedRace(null)}/>
 
   if (newGroup) {
     const joinUrl = `${appUrl}/join/${newGroup.join_code}`
@@ -118,7 +112,7 @@ export default function GroupLobby({ user, profile, onJoinGroup, onProfileUpdate
           <input style={S.input} value={groupName} onChange={e=>setGroupName(e.target.value)} placeholder="Ex: Soirée IUT 🎉" maxLength={40} onKeyDown={(e:any)=>e.key==="Enter"&&createGroup()}/>
           {error && <div style={{ color:"#ef4444",fontSize:12,marginBottom:8 }}>{error}</div>}
           <div style={{ display:"flex",gap:8 }}>
-            <button onClick={()=>setCreating(false)} style={{ ...S.btn("#1e1e2e"),border:"1px solid #2a2a3e",color:"#6b7280",flex:1 }}>Annuler</button>
+            <button onClick={()=>setCreating(false)} style={{ ...S.btn("#1e1e2e",{border:"1px solid #2a2a3e",color:"#6b7280",flex:1}) }}>Annuler</button>
             <button onClick={createGroup} disabled={loading} style={{ ...S.btn(),flex:2 }}>{loading?"Création…":"Créer 🎉"}</button>
           </div>
         </div>
@@ -135,15 +129,23 @@ export default function GroupLobby({ user, profile, onJoinGroup, onProfileUpdate
 
       {groups.length > 0 && (
         <div style={S.card}>
-          <div style={{ fontSize:11,fontWeight:700,color:"#6b7280",letterSpacing:1,textTransform:"uppercase" as const,marginBottom:10 }}>Soirées passées</div>
+          <div style={{ fontSize:11,fontWeight:700,color:"#6b7280",letterSpacing:1,textTransform:"uppercase" as const,marginBottom:10 }}>Mes soirées</div>
           {groups.map((g:any)=>(
-            <div key={g.id} style={{ display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:"1px solid #1e1e2e" }}>
+            <div key={g.id} style={{ display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"1px solid #1e1e2e" }}>
               <div style={{ flex:1 }}>
                 <div style={{ fontSize:13,fontWeight:600,color:"#e2e8f0" }}>{g.name}</div>
-                <div style={{ fontSize:10,color:g.status==="active"?"#4ade80":"#6b7280" }}>{g.status==="active"?"🟢 En cours":g.status==="waiting"?"⏳ En attente":"⚫ Terminé"}</div>
+                <div style={{ fontSize:10,color:g.status==="active"?"#4ade80":g.status==="waiting"?"#fbbf24":"#6b7280" }}>
+                  {g.status==="active"?"🟢 En cours":g.status==="waiting"?"⏳ En attente":"⚫ Terminé"}
+                </div>
               </div>
-              {g.status==="active" && (
-                <button onClick={()=>onJoinGroup(g)} style={{ background:"#166534",border:"none",borderRadius:8,color:"#4ade80",fontSize:11,padding:"5px 10px",cursor:"pointer" }}>Rejoindre</button>
+              {(g.status==="active"||g.status==="waiting") ? (
+                <button onClick={()=>onJoinGroup(g)} style={{ background:"#166534",border:"none",borderRadius:8,color:"#4ade80",fontSize:11,padding:"6px 12px",cursor:"pointer",fontWeight:600 }}>
+                  {g.status==="active"?"Rejoindre":"Attente"}
+                </button>
+              ) : (
+                <button onClick={()=>setSelectedRace(g)} style={{ background:"#1e1e2e",border:"1px solid #2a2a3e",borderRadius:8,color:"#9ca3af",fontSize:11,padding:"6px 12px",cursor:"pointer" }}>
+                  Voir 📊
+                </button>
               )}
             </div>
           ))}
