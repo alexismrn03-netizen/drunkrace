@@ -97,8 +97,8 @@ export function serializeDrink(d: DrinkEntry): object {
 // ── Deserialize from Supabase JSONB ──
 export function deserializeDrink(raw: any): DrinkEntry | null {
   try {
-    if (!raw || typeof raw !== "object") return null
-    // Support old format (plain string drink ID)
+    if (!raw) return null
+    // Plain string = legacy drink ID
     if (typeof raw === "string") {
       const base = DRINK_BASES.find(b => b.id === raw)
       if (!base) return null
@@ -112,20 +112,35 @@ export function deserializeDrink(raw: any): DrinkEntry | null {
         degree_pct: base.degree_pct,
         alcohol_g: alcoholGrams(vol, base.degree_pct),
         color: base.color,
-        addedAt: Date.now(),
+        addedAt: Date.now() - 5 * 60000, // assume 5 min ago
       }
     }
+    if (typeof raw !== "object") return null
+    
+    // Parse addedAt carefully - it might be string, number, or missing
+    let addedAt = raw.addedAt
+    if (typeof addedAt === "string") addedAt = parseInt(addedAt, 10)
+    addedAt = Number(addedAt)
+    // If addedAt is invalid or 0, use recent time
+    if (!addedAt || isNaN(addedAt) || addedAt < 1000000000000) {
+      addedAt = Date.now() - 5 * 60000
+    }
+
+    const vol_cl = Number(raw.vol_cl ?? 0)
+    const degree_pct = Number(raw.degree_pct ?? 0)
+    const alcohol_g = Number(raw.alcohol_g ?? 0) || alcoholGrams(vol_cl, degree_pct)
+
     return {
-      id: String(raw.id ?? `${raw.drinkId}_${raw.addedAt}`),
+      id: String(raw.id ?? `${raw.drinkId}_${addedAt}`),
       drinkId: String(raw.drinkId ?? ""),
       name: String(raw.name ?? ""),
       emoji: String(raw.emoji ?? "🍺"),
-      vol_cl: Number(raw.vol_cl ?? 0),
-      degree_pct: Number(raw.degree_pct ?? 0),
-      alcohol_g: Number(raw.alcohol_g ?? 0),
+      vol_cl,
+      degree_pct,
+      alcohol_g,
       color: String(raw.color ?? "#a855f7"),
       mixer: raw.mixer ?? undefined,
-      addedAt: Number(raw.addedAt ?? Date.now()),
+      addedAt,
     }
   } catch { return null }
 }
@@ -136,15 +151,27 @@ export const ELIM_RATE = 0.12
 export function calcBACAtTime(drinks: DrinkEntry[], weight_kg: number, sex: string, atMs: number): number {
   if (!drinks.length) return 0
   const r = sex === "M" ? 0.68 : 0.55
+  const now = Date.now()
+  
+  // Normalize addedAt: if timestamp seems wrong (future, or > 24h ago with no session), clamp it
+  const normalizedDrinks = drinks.map((d, i) => {
+    let addedAt = Number(d.addedAt)
+    // If addedAt is invalid, missing, or in the future → spread drinks evenly in last hour
+    if (!addedAt || isNaN(addedAt) || addedAt > now + 60000) {
+      addedAt = now - (drinks.length - i) * 10 * 60000 // 10 min apart, ending now
+    }
+    return { ...d, addedAt }
+  })
+
   let totalAbsorbed = 0
-  for (const d of drinks) {
+  for (const d of normalizedDrinks) {
     const minsElapsed = (atMs - d.addedAt) / 60000
     if (minsElapsed < 0) continue
     const absorbPct = Math.min(minsElapsed / 90, 1)
     totalAbsorbed += d.alcohol_g * absorbPct
   }
   const rawBAC = totalAbsorbed / (weight_kg * r * 10)
-  const firstDrink = Math.min(...drinks.map(d => d.addedAt))
+  const firstDrink = Math.min(...normalizedDrinks.map(d => d.addedAt))
   const hoursTotal = (atMs - firstDrink) / 3600000
   const eliminated = Math.max(0, hoursTotal * ELIM_RATE)
   return Math.max(0, parseFloat((rawBAC - eliminated).toFixed(3)))
