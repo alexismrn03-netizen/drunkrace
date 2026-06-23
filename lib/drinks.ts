@@ -76,7 +76,15 @@ export function alcoholGrams(vol_cl: number, degree_pct: number): number {
   return parseFloat((vol_cl * 10 * (degree_pct / 100) * 0.8).toFixed(2))
 }
 
+// Legacy (not used)
 export const cmToMeters = (cl: number) => cl * 0.5
+// New distance formula: alcohol_g^0.6 * vol_cl^0.4
+// More alcohol = more distance, volume also matters but less
+// Examples: Shot vodka 4cl=8m, Despe 50cl=32m, Bière 25cl=14m
+export function calcDistance(alcohol_g: number, vol_cl: number): number {
+  if (!alcohol_g || !vol_cl) return 0
+  return parseFloat((Math.pow(alcohol_g, 0.6) * Math.pow(vol_cl, 0.4)).toFixed(1))
+}
 
 // ── Serialize DrinkEntry to plain object safe for Supabase JSONB ──
 export function serializeDrink(d: DrinkEntry): object {

@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect } from "react"
-import { DRINK_BASES, DRINK_CATEGORIES, alcoholGrams, calcBACAtTime, calcCurrentBAC, calcPeak, calcSoberTime, getBACStatus, fmtTime, cmToMeters, type DrinkEntry } from "@/lib/drinks"
+import { DRINK_BASES, DRINK_CATEGORIES, alcoholGrams, calcBACAtTime, calcCurrentBAC, calcPeak, calcSoberTime, getBACStatus, fmtTime, cmToMeters, calcDistance, type DrinkEntry } from "@/lib/drinks"
 
 function BACForecast({ drinks, weight_kg, sex }: { drinks: DrinkEntry[], weight_kg: number, sex: string }) {
   const [now, setNow] = useState(Date.now())
@@ -110,7 +110,7 @@ export default function DrinkTab({ myMember, samMember, onAddDrink, onUndo }: an
   const currentBAC = calcCurrentBAC(myMember.drinks, myMember.weight_kg, myMember.sex)
   const samLimit = samMember?.youngDriver ? 0.2 : 0.5
   const samLocked = isSam && currentBAC >= samLimit
-  const dist = myMember.drinks.reduce((s: number, d: DrinkEntry) => s + cmToMeters(d.vol_cl), 0)
+  const dist = myMember.drinks.reduce((s: number, d: DrinkEntry) => s + calcDistance(d.alcohol_g, d.vol_cl), 0)
   const st = getBACStatus(currentBAC)
   const base = selectedBase ? DRINK_BASES.find(b => b.id === selectedBase) : null
   const catBases = DRINK_BASES.filter(b => b.category === cat)
@@ -231,7 +231,7 @@ export default function DrinkTab({ myMember, samMember, onAddDrink, onUndo }: an
                 <div style={{ fontSize:10,color:"#6b7280",marginTop:2 }}>{base.degree_pct}% · {previewAlcG.toFixed(1)}g alcool</div>
               </div>
               <div style={{ textAlign:"right" }}>
-                <div style={{ fontSize:16,fontWeight:700,color:"#c084fc",fontFamily:"'Bebas Neue',cursive" }}>+{cmToMeters(selectedVol).toFixed(1)}m</div>
+                <div style={{ fontSize:16,fontWeight:700,color:"#c084fc",fontFamily:"'Bebas Neue',cursive" }}>+{calcDistance(previewAlcG,selectedVol).toFixed(1)}m</div>
                 <div style={{ fontSize:10,color:"#f87171" }}>+{previewBACAdd.toFixed(3)}‰</div>
               </div>
             </div>
@@ -255,7 +255,7 @@ export default function DrinkTab({ myMember, samMember, onAddDrink, onUndo }: an
                   <div style={{ fontSize:11,color:"#e2e8f0" }}>{d.name} {d.vol_cl}cl</div>
                   <div style={{ fontSize:9,color:"#6b7280" }}>{d.degree_pct}% · {d.alcohol_g.toFixed(1)}g · {fmtTime(d.addedAt)}</div>
                 </div>
-                <span style={{ fontSize:10,color:d.color,fontWeight:600 }}>+{cmToMeters(d.vol_cl).toFixed(1)}m</span>
+                <span style={{ fontSize:10,color:d.color,fontWeight:600 }}>+{calcDistance(d.alcohol_g,d.vol_cl).toFixed(1)}m</span>
               </div>
             ))}
           </div>

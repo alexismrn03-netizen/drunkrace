@@ -1,8 +1,8 @@
 "use client"
 import { useState } from "react"
 import { createClient } from "@/lib/supabase"
-import { AVATAR_COUNT } from "@/components/DrunkAvatar"
-import DrunkAvatar from "@/components/DrunkAvatar"
+import DrunkAvatar, { type AvatarConfig, DEFAULT_AVATAR, AVATAR_COUNT } from "@/components/DrunkAvatar"
+import AvatarEditor from "@/components/AvatarEditor"
 
 const S = {
   wrap: { minHeight:"100vh",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",padding:24 },
@@ -15,7 +15,8 @@ export default function ProfileSetup({ user, onDone }: { user: any, onDone: () =
   const [pseudo, setPseudo] = useState("")
   const [weight, setWeight] = useState("70")
   const [sex, setSex] = useState("M")
-  const [avatar, setAvatar] = useState(0) // avatar index
+  const [avatarCfg, setAvatarCfg] = useState<AvatarConfig>(DEFAULT_AVATAR)
+  const [editAvatar, setEditAvatar] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const supabase = createClient()
@@ -25,7 +26,7 @@ export default function ProfileSetup({ user, onDone }: { user: any, onDone: () =
     setLoading(true)
     const { error: e } = await supabase.from("profiles").upsert({
       id: user.id, email: user.email, pseudo: pseudo.trim(),
-      weight_kg: parseInt(weight) || 70, sex, avatar: String(avatar),
+      weight_kg: parseInt(weight) || 70, sex, avatar_config: avatarCfg,
       updated_at: new Date().toISOString()
     })
     if (e) { setError(e.message); setLoading(false); return }
@@ -35,7 +36,7 @@ export default function ProfileSetup({ user, onDone }: { user: any, onDone: () =
   return (
     <div style={S.wrap}>
       <div style={{ textAlign:"center",marginBottom:28 }}>
-        <DrunkAvatar avatarIndex={avatar} color="#a855f7" bac={0} size={90} animate={false}/>
+        <DrunkAvatar config={avatarCfg} bac={0} size={90} animate={false}/>
         <h1 style={{ fontFamily:"'Bebas Neue',cursive",fontSize:28,letterSpacing:3,background:"linear-gradient(135deg,#c084fc,#ec4899)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",margin:0 }}>
           Créer mon profil
         </h1>
@@ -44,15 +45,14 @@ export default function ProfileSetup({ user, onDone }: { user: any, onDone: () =
 
       <div style={{ width:"100%",maxWidth:360 }}>
         {/* Avatar */}
-        <div style={{ background:"#13131f",border:"1px solid #2a2a3e",borderRadius:16,padding:16,marginBottom:12 }}>
-          <label style={S.label}>Choisis ton avatar</label>
-          <div style={{ display:"flex",flexWrap:"wrap" as const,gap:8 }}>
-            {Array.from({length:AVATAR_COUNT},(_,i)=>(
-              <button key={i} onClick={()=>setAvatar(i)} style={{ padding:4,borderRadius:10,border:"none",cursor:"pointer",background:avatar===i?"#3b1f6a":"#1e1e2e",outline:avatar===i?"2px solid #a855f7":"2px solid transparent",transition:"all .15s" }}>
-                <DrunkAvatar avatarIndex={i} color="#a855f7" bac={0} size={44}/>
-              </button>
-            ))}
-          </div>
+        {editAvatar && <AvatarEditor initial={avatarCfg} onSave={setAvatarCfg} onClose={()=>setEditAvatar(false)}/>}
+        <div style={{ background:"#13131f",border:"1px solid #2a2a3e",borderRadius:16,padding:14,marginBottom:12,textAlign:"center" as const }}>
+          <label style={S.label}>Avatar</label>
+          <DrunkAvatar config={avatarCfg} bac={0} size={80} animate={false}/>
+          <br/>
+          <button onClick={()=>setEditAvatar(true)} style={{ background:"#1e1e2e",border:"1px solid #3b1f6a",borderRadius:12,padding:"8px 20px",color:"#c084fc",fontSize:13,fontWeight:700,cursor:"pointer",marginTop:8 }}>
+            🎨 Personnaliser
+          </button>
         </div>
 
         <div style={{ background:"#13131f",border:"1px solid #2a2a3e",borderRadius:16,padding:16,marginBottom:12 }}>
