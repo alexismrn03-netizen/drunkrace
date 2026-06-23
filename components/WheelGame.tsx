@@ -23,37 +23,23 @@ const CHALLENGES: Challenge[] = [
   { id:"moins50",    label:"−50m !!!",                     emoji:"☠️", color:"#7f1d1d", type:"distance", delta: -50, needsTarget:true },
 ]
 
-// 2x each normal challenge (interleaved so same never adjacent) + 1x -50m
-// Interleave: [1,2,3,4,5,6,7,8, 1,2,3,4,5,6,7,8] → shuffle each half then interleave
-function shuffleArray<T>(arr: T[]): T[] {
-  const a = [...arr]
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]]
-  }
-  return a
+// Fixed alternating order — guaranteed no two same segments adjacent
+// Pattern: [0,4,1,5,2,6,3,7] then [0,4,1,5,2,6,3,7] offset → perfect alternation
+// Then -50m inserted at a safe spot
+const BASE8 = CHALLENGES.slice(0, 8)
+// First copy: indices 0,1,2,3,4,5,6,7 → interleaved as 0,4,1,5,2,6,3,7
+const COPY1 = [0,4,1,5,2,6,3,7].map(i => ({ ...BASE8[i] }))
+// Second copy: offset by 2 → 2,6,3,7,0,4,1,5
+const COPY2 = [2,6,3,7,0,4,1,5].map(i => ({ ...BASE8[i] }))
+// Merge: C1[0],C2[0],C1[1],C2[1]... ensures no two same are adjacent
+const MERGED: Challenge[] = []
+for (let i = 0; i < 8; i++) {
+  MERGED.push(COPY1[i])
+  MERGED.push(COPY2[i])
 }
-function interleave<T>(arr: T[]): T[] {
-  // Split in half, shuffle each, interleave so same index never adjacent
-  const half = Math.floor(arr.length / 2)
-  const a = shuffleArray(arr.slice(0, half))
-  const b = shuffleArray(arr.slice(half))
-  const result: T[] = []
-  for (let i = 0; i < Math.max(a.length, b.length); i++) {
-    if (i < a.length) result.push(a[i])
-    if (i < b.length) result.push(b[i])
-  }
-  return result
-}
-const BASE = CHALLENGES.slice(0, 8).map(c => ({ ...c }))
-const INTERLEAVED = interleave([...BASE, ...BASE.map(c => ({ ...c }))])
-// Insert -50m at position ~middle so it's surrounded by different ones
-const insertIdx = Math.floor(INTERLEAVED.length / 2)
-const WHEEL_ITEMS: Challenge[] = [
-  ...INTERLEAVED.slice(0, insertIdx),
-  CHALLENGES[8],
-  ...INTERLEAVED.slice(insertIdx),
-]
+// Insert -50m at position 8 (middle) — surrounded by index 3 and 6, both different
+MERGED.splice(8, 0, { ...CHALLENGES[8] })
+const WHEEL_ITEMS: Challenge[] = MERGED
 
 interface Props {
   members: any[]
