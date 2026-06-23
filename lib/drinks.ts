@@ -152,28 +152,47 @@ export function calcBACAtTime(drinks: DrinkEntry[], weight_kg: number, sex: stri
   if (!drinks.length) return 0
   const r = sex === "M" ? 0.68 : 0.55
   const now = Date.now()
-  
-  // Normalize addedAt: if timestamp seems wrong (future, or > 24h ago with no session), clamp it
-  const normalizedDrinks = drinks.map((d, i) => {
+
+  // Normalize addedAt timestamps
+  let normalized = drinks.map((d, i) => {
     let addedAt = Number(d.addedAt)
-    // If addedAt is invalid, missing, or in the future → spread drinks evenly in last hour
     if (!addedAt || isNaN(addedAt) || addedAt > now + 60000) {
-      addedAt = now - (drinks.length - i) * 10 * 60000 // 10 min apart, ending now
+      addedAt = now - (drinks.length - 1 - i) * 3 * 60000
     }
     return { ...d, addedAt }
   })
 
+  // If all timestamps identical → spread 3min apart ending at that time
+  const times = normalized.map(d => d.addedAt)
+  if (normalized.length > 1 && times.every(t => Math.abs(t - times[0]) < 5000)) {
+    const base = times[0]
+    normalized = normalized.map((d, i) => ({
+      ...d,
+      addedAt: base - (normalized.length - 1 - i) * 3 * 60000
+    }))
+  }
+
+  // Widmark formula (correct):
+  // BAC (‰) = alcohol_g_absorbed / (weight_kg * r)
+  // Then subtract elimination since first drink
+  // Absorption: linear 0→100% over 90 minutes
+
   let totalAbsorbed = 0
-  for (const d of normalizedDrinks) {
+  for (const d of normalized) {
     const minsElapsed = (atMs - d.addedAt) / 60000
     if (minsElapsed < 0) continue
     const absorbPct = Math.min(minsElapsed / 90, 1)
     totalAbsorbed += d.alcohol_g * absorbPct
   }
-  const rawBAC = totalAbsorbed / (weight_kg * r * 10)
-  const firstDrink = Math.min(...normalizedDrinks.map(d => d.addedAt))
-  const hoursTotal = (atMs - firstDrink) / 3600000
-  const eliminated = Math.max(0, hoursTotal * ELIM_RATE)
+
+  // Raw BAC from absorbed alcohol
+  const rawBAC = totalAbsorbed / (weight_kg * r)  // ← CORRECT: no /10
+
+  // Elimination since first drink (conservative: starts immediately)
+  const firstDrink = Math.min(...normalized.map(d => d.addedAt))
+  const hoursElapsed = Math.max(0, (atMs - firstDrink) / 3600000)
+  const eliminated = hoursElapsed * ELIM_RATE
+
   return Math.max(0, parseFloat((rawBAC - eliminated).toFixed(3)))
 }
 
