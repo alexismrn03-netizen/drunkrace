@@ -36,23 +36,25 @@ function Dice3D({ value, rolling, color = "#a855f7", size = 100 }: { value: numb
       const animate = () => {
         const t = (Date.now() - startRef.current) / 1000
         setRotation({
-          x: t * 300 + Math.sin(t * 7) * 60,
-          y: t * 400 + Math.cos(t * 5) * 80,
-          z: t * 150 + Math.sin(t * 3) * 30,
+          x: t * 370 + Math.sin(t * 6.3) * 55,
+          y: t * 450 + Math.cos(t * 4.7) * 75,
+          z: t * 180 + Math.sin(t * 2.9) * 40,
         })
         frameRef.current = requestAnimationFrame(animate)
       }
       frameRef.current = requestAnimationFrame(animate)
     } else {
       cancelAnimationFrame(frameRef.current)
-      // Snap to face rotation
+      // Map value to rotation that correctly shows that face
+      // Face layout: 1=front(Z+), 6=back(Z-), 2=right(X+), 5=left(X-), 4=top(Y-), 3=bottom(Y+)
+      // To show face N on front: rotate so face N faces viewer
       const faceMap: Record<number, {x:number,y:number,z:number}> = {
-        1: { x:0, y:0, z:0 },
-        2: { x:0, y:90, z:0 },
-        3: { x:90, y:0, z:0 },
-        4: { x:-90, y:0, z:0 },
-        5: { x:0, y:-90, z:0 },
-        6: { x:0, y:180, z:0 },
+        1: { x:0,   y:0,    z:0 },   // face 1 already faces front
+        2: { x:0,   y:-90,  z:0 },   // rotate left so face2(right) faces front  
+        3: { x:90,  y:0,    z:0 },   // rotate up so face3(bottom) faces front
+        4: { x:-90, y:0,    z:0 },   // rotate down so face4(top) faces front
+        5: { x:0,   y:90,   z:0 },   // rotate right so face5(left) faces front
+        6: { x:0,   y:180,  z:0 },   // rotate 180 so face6(back) faces front
       }
       const target = faceMap[value] || faceMap[1]
       setRotation(target)

@@ -7,7 +7,10 @@ type Phase = "setup" | "ready1" | "lights" | "p1" | "ready2" | "p2" | "result"
 // ── SOUND ENGINE ─────────────────────────────────────────────────────────────
 function playSound(type: "light_on" | "go" | "stop" | "beep") {
   try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
+    const ctx = new AudioCtx()
+    // Resume context if suspended (iOS Safari requires user gesture)
+    if (ctx.state === "suspended") ctx.resume()
     const g = ctx.createGain()
     g.connect(ctx.destination)
 
@@ -253,7 +256,7 @@ export default function DuelGame({ members, onAwardDistance, onClose }: Props) {
           </div>
           <div style={{ fontSize:12,color:"#6b7280",marginTop:8 }}>Prends ton verre en main 🍺</div>
         </div>
-        <button onClick={()=>startLightsAndTimer("p1")} style={{ width:"100%",maxWidth:340,padding:"20px",borderRadius:18,border:"none",cursor:"pointer",background:"linear-gradient(135deg,#ef4444,#dc2626)",color:"#fff",fontSize:20,fontWeight:700,fontFamily:"'Space Grotesk',sans-serif",boxShadow:"0 0 30px #ef444460" }}>
+        <button onClick={()=>{ playSound("beep"); startLightsAndTimer("p1") }} style={{ width:"100%",maxWidth:340,padding:"20px",borderRadius:18,border:"none",cursor:"pointer",background:"linear-gradient(135deg,#ef4444,#dc2626)",color:"#fff",fontSize:20,fontWeight:700,fontFamily:"'Space Grotesk',sans-serif",boxShadow:"0 0 30px #ef444460" }}>
           🚦 JE SUIS PRÊT !
         </button>
       </div>
@@ -280,7 +283,7 @@ export default function DuelGame({ members, onAwardDistance, onClose }: Props) {
           <div style={{ fontSize:10,color:"#6b7280",marginBottom:2 }}>🔴 {p1.name} a fini en</div>
           <div style={{ fontFamily:"'Bebas Neue',cursive",fontSize:22,color:"#ef4444" }}>{p1.time ? `${(p1.time/1000).toFixed(2)}s` : "?"}</div>
         </div>
-        <button onClick={()=>startLightsAndTimer("p2")} style={{ width:"100%",maxWidth:340,padding:"20px",borderRadius:18,border:"none",cursor:"pointer",background:"linear-gradient(135deg,#3b82f6,#1d4ed8)",color:"#fff",fontSize:20,fontWeight:700,fontFamily:"'Space Grotesk',sans-serif",boxShadow:"0 0 30px #3b82f660" }}>
+        <button onClick={()=>{ playSound("beep"); startLightsAndTimer("p2") }} style={{ width:"100%",maxWidth:340,padding:"20px",borderRadius:18,border:"none",cursor:"pointer",background:"linear-gradient(135deg,#3b82f6,#1d4ed8)",color:"#fff",fontSize:20,fontWeight:700,fontFamily:"'Space Grotesk',sans-serif",boxShadow:"0 0 30px #3b82f660" }}>
           🚦 JE SUIS PRÊT !
         </button>
       </div>

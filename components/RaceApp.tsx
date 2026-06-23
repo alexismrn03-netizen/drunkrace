@@ -552,8 +552,16 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
   }
 
   const loadEvents = async () => {
-    const { data } = await supabase.from("race_events").select("*, profiles!target_user_id(pseudo)").eq("group_id",group.id).order("created_at",{ascending:false}).limit(10)
-    if (data) setEvents(data.map((e:any)=>({...e, target_pseudo:e.profiles?.pseudo})))
+    const { data, error } = await supabase.from("race_events").select("*").eq("group_id",group.id).order("created_at",{ascending:false})
+    if (error) { console.error("loadEvents error:", error); return }
+    if (data) {
+      // Enrich with pseudo from members
+      const enriched = data.map((e:any) => {
+        const member = members.find((m:any) => m.user_id === e.target_user_id)
+        return { ...e, target_pseudo: member?.pseudo || "?" }
+      })
+      setEvents(enriched)
+    }
   }
 
   useEffect(()=>{
