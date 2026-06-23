@@ -15,6 +15,7 @@ export default function GroupLobby({ user, profile, onJoinGroup, onProfileUpdate
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [selectedRace, setSelectedRace] = useState<any>(null)
+  const [confirmDelete, setConfirmDelete] = useState<any>(null)
   const supabase = createClient()
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://drunkrace.vercel.app"
 
@@ -31,12 +32,13 @@ export default function GroupLobby({ user, profile, onJoinGroup, onProfileUpdate
   const deleteGroup = async (g: any) => {
     const isCreator = g.creator_id === user.id
     if (isCreator) {
-      if (!confirm(`Supprimer "${g.name}" pour tout le monde ? Cette action est irréversible.`)) return
-      await supabase.from("groups").delete().eq("id", g.id)
+      const { error } = await supabase.from("groups").delete().eq("id", g.id)
+      if (error) console.error("delete group:", error)
     } else {
-      if (!confirm(`Quitter "${g.name}" ? Tu pourras rejoindre à nouveau avec le code.`)) return
-      await supabase.from("group_members").delete().eq("group_id", g.id).eq("user_id", user.id)
+      const { error } = await supabase.from("group_members").delete().eq("group_id", g.id).eq("user_id", user.id)
+      if (error) console.error("leave group:", error)
     }
+    setConfirmDelete(null)
     loadGroups()
   }
 
@@ -82,6 +84,30 @@ export default function GroupLobby({ user, profile, onJoinGroup, onProfileUpdate
   }
 
   if (selectedRace) return <FinishedRace race={selectedRace} onBack={() => setSelectedRace(null)}/>
+
+  if (confirmDelete) return (
+    <div style={{ minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:24,background:"#0a0a14" }}>
+      <div style={{ width:"100%",maxWidth:360,textAlign:"center" }}>
+        <div style={{ fontSize:48,marginBottom:16 }}>🗑</div>
+        <h2 style={{ fontFamily:"'Bebas Neue',cursive",fontSize:24,color:"#f87171",letterSpacing:2,margin:"0 0 12px" }}>
+          {confirmDelete.creator_id===user.id?"Supprimer la soirée ?":"Quitter la soirée ?"}
+        </h2>
+        <p style={{ color:"#9ca3af",fontSize:13,margin:"0 0 24px",lineHeight:1.6 }}>
+          {confirmDelete.creator_id===user.id
+            ? `"${confirmDelete.name}" sera supprimée pour tout le monde. Action irréversible.`
+            : `Tu quitteras "${confirmDelete.name}". Tu pourras rejoindre à nouveau avec le code.`}
+        </p>
+        <div style={{ display:"flex",gap:10 }}>
+          <button onClick={()=>setConfirmDelete(null)} style={{ flex:1,padding:"13px",borderRadius:13,border:"1px solid #2a2a3e",cursor:"pointer",background:"#1e1e2e",color:"#9ca3af",fontSize:14,fontWeight:700 }}>
+            Annuler
+          </button>
+          <button onClick={()=>deleteGroup(confirmDelete)} style={{ flex:1,padding:"13px",borderRadius:13,border:"none",cursor:"pointer",background:"linear-gradient(135deg,#ef4444,#dc2626)",color:"#fff",fontSize:14,fontWeight:700 }}>
+            {confirmDelete.creator_id===user.id?"Supprimer":"Quitter"}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 
   if (newGroup) {
     const joinUrl = `${appUrl}/join/${newGroup.join_code}`
@@ -160,7 +186,7 @@ export default function GroupLobby({ user, profile, onJoinGroup, onProfileUpdate
                     Voir 📊
                   </button>
                 )}
-                <button onClick={()=>deleteGroup(g)} style={{ background:"#1c0505",border:"1px solid #7f1d1d",borderRadius:8,color:"#f87171",fontSize:13,padding:"5px 8px",cursor:"pointer" }}>
+                <button onClick={()=>setConfirmDelete(g)} style={{ background:"#1c0505",border:"1px solid #7f1d1d",borderRadius:8,color:"#f87171",fontSize:13,padding:"5px 8px",cursor:"pointer" }}>
                   🗑
                 </button>
               </div>
