@@ -28,6 +28,18 @@ export default function GroupLobby({ user, profile, onJoinGroup, onProfileUpdate
     setGroups(data || [])
   }
 
+  const deleteGroup = async (g: any) => {
+    const isCreator = g.creator_id === user.id
+    if (isCreator) {
+      if (!confirm(`Supprimer "${g.name}" pour tout le monde ? Cette action est irréversible.`)) return
+      await supabase.from("groups").delete().eq("id", g.id)
+    } else {
+      if (!confirm(`Quitter "${g.name}" ? Tu pourras rejoindre à nouveau avec le code.`)) return
+      await supabase.from("group_members").delete().eq("group_id", g.id).eq("user_id", user.id)
+    }
+    loadGroups()
+  }
+
   const createGroup = async () => {
     if (!groupName.trim()) return
     setLoading(true); setError("")
@@ -138,15 +150,20 @@ export default function GroupLobby({ user, profile, onJoinGroup, onProfileUpdate
                   {g.status==="active"?"🟢 En cours":g.status==="waiting"?"⏳ En attente":"⚫ Terminé"}
                 </div>
               </div>
-              {(g.status==="active"||g.status==="waiting") ? (
-                <button onClick={()=>onJoinGroup(g)} style={{ background:"#166534",border:"none",borderRadius:8,color:"#4ade80",fontSize:11,padding:"6px 12px",cursor:"pointer",fontWeight:600 }}>
-                  {g.status==="active"?"Rejoindre":"Attente"}
+              <div style={{ display:"flex",gap:6,alignItems:"center" }}>
+                {(g.status==="active"||g.status==="waiting") ? (
+                  <button onClick={()=>onJoinGroup(g)} style={{ background:"#166534",border:"none",borderRadius:8,color:"#4ade80",fontSize:11,padding:"6px 10px",cursor:"pointer",fontWeight:600 }}>
+                    {g.status==="active"?"Rejoindre":"Attente"}
+                  </button>
+                ) : (
+                  <button onClick={()=>setSelectedRace(g)} style={{ background:"#1e1e2e",border:"1px solid #2a2a3e",borderRadius:8,color:"#9ca3af",fontSize:11,padding:"6px 10px",cursor:"pointer" }}>
+                    Voir 📊
+                  </button>
+                )}
+                <button onClick={()=>deleteGroup(g)} style={{ background:"#1c0505",border:"1px solid #7f1d1d",borderRadius:8,color:"#f87171",fontSize:13,padding:"5px 8px",cursor:"pointer" }}>
+                  🗑
                 </button>
-              ) : (
-                <button onClick={()=>setSelectedRace(g)} style={{ background:"#1e1e2e",border:"1px solid #2a2a3e",borderRadius:8,color:"#9ca3af",fontSize:11,padding:"6px 12px",cursor:"pointer" }}>
-                  Voir 📊
-                </button>
-              )}
+              </div>
             </div>
           ))}
         </div>
