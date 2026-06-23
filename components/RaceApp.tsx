@@ -519,6 +519,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
   const [showRedFlag, setShowRedFlag] = useState(false)
   const [showDuel, setShowDuel]       = useState(false)
   const [showRPS, setShowRPS]         = useState(false)
+  const [incomingRPS, setIncomingRPS] = useState<any>(null)
   const [ended, setEnded]       = useState(group.status==="finished")
   const supabase = createClient()
 
@@ -549,6 +550,18 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
       .on("postgres_changes",{event:"*",schema:"public",table:"race_events",filter:`group_id=eq.${group.id}`},()=>loadEvents())
       .on("postgres_changes",{event:"UPDATE",schema:"public",table:"groups",filter:`id=eq.${group.id}`},(payload:any)=>{if(payload.new.status==="finished")setEnded(true)})
       .subscribe()
+    // Game invite subscription
+    const inviteChannel = supabase.channel(`invites-${user.id}`)
+      .on("postgres_changes", {
+        event: "INSERT", schema: "public", table: "game_invites",
+        filter: `to_user_id=eq.${user.id}`
+      }, (payload: any) => {
+        if (payload.new.group_id === group.id && payload.new.game_type === "rps" && payload.new.status === "pending") {
+          setIncomingRPS(payload.new)
+        }
+      })
+      .subscribe()
+
     // Fastest lap check every 30s
     const flInterval = setInterval(async ()=>{
       const now=Date.now()
@@ -565,7 +578,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
         }
       }
     }, 30000)
-    return ()=>{supabase.removeChannel(channel);clearInterval(flInterval)}
+    return ()=>{supabase.removeChannel(channel);supabase.removeChannel(inviteChannel);clearInterval(flInterval)}
   },[group.id])
 
   const myMember  = members.find(m=>m.isMe)
@@ -653,10 +666,25 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
       {tab==="photo"   && <PhotoTab groupId={group.id} userId={user.id}/>}
       {tab==="profile" && <ProfileTab myMember={myMember} user={user} group={group} onUpdate={(p:any)=>{setMembers(prev=>prev.map(m=>m.isMe?{...m,...p}:m));onProfileUpdate()}}/>}
       <TabBar active={tab} onChange={setTab}/>
+      {/* Incoming invite banner */}
+      {incomingRPS && !showRPS && (
+        <div style={{position:"fixed",top:0,left:0,right:0,zIndex:500,background:"linear-gradient(135deg,#a855f7,#ec4899)",padding:"14px 16px",display:"flex",alignItems:"center",gap:12}}>
+          <span style={{fontSize:22}}>🤜</span>
+          <div style={{flex:1}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#fff"}}>Défi reçu !</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.8)"}}>
+              {members.find((m:any)=>m.user_id===incomingRPS.from_user_id)?.pseudo} te défie au PFC !
+            </div>
+          </div>
+          <button onClick={()=>setIncomingRPS(null)} style={{background:"rgba(255,255,255,0.2)",border:"none",borderRadius:8,color:"#fff",fontSize:11,padding:"4px 8px",cursor:"pointer",marginRight:4}}>Refuser</button>
+          <button onClick={()=>{}} style={{background:"#fff",border:"none",borderRadius:8,color:"#a855f7",fontSize:11,padding:"4px 10px",cursor:"pointer",fontWeight:700}}>Accepter !</button>
+        </div>
+      )}
       {showWheel&&<SamWheel members={members} onSamChosen={handleSamChosen} onClose={()=>setShowWheel(false)}/>}
       {showRedFlag&&<RedFlagModal members={members} myId={user.id} groupId={group.id} onClose={()=>{setShowRedFlag(false);loadEvents()}}/>}
       {showDuel&&<DuelGame members={members} onAwardDistance={handleAwardDistance} onClose={()=>setShowDuel(false)}/>}
-      {showRPS&&<RPSGame members={members} onAwardDistance={handleAwardSimple} onClose={()=>setShowRPS(false)}/>}
+      {showRPS&&<RPSGame members={members} myUserId={user.id} groupId={group.id} onAwardDistance={handleAwardSimple} onClose={()=>setShowRPS(false)}/>}
+      {incomingRPS&&<RPSGame members={members} myUserId={user.id} groupId={group.id} invite={incomingRPS} onAwardDistance={handleAwardSimple} onClose={()=>setIncomingRPS(null)}/>}
     </div>
   )
 }
