@@ -22,19 +22,20 @@ const CHALLENGES: Challenge[] = [
   { id:"moins50",   label:"−50m !!",                   emoji:"☠️", color:"#7f1d1d", type:"distance", delta: -50 },
 ]
 
-// Weighted wheel: normal cases x3, -50m case x1 (3x smaller visually)
-// We do this by giving -50m 1 slot vs 3 slots for others
-const WHEEL_ITEMS: Challenge[] = [
-  ...Array(3).fill(CHALLENGES[0]), // shot x3
-  ...Array(3).fill(CHALLENGES[1]), // culsec x3
-  ...Array(3).fill(CHALLENGES[2]), // finir x3
-  ...Array(3).fill(CHALLENGES[3]), // distribuer x3
-  ...Array(3).fill(CHALLENGES[4]), // designer x3
-  ...Array(3).fill(CHALLENGES[5]), // toutlemonde x3
-  ...Array(3).fill(CHALLENGES[6]), // +10m x3
-  ...Array(3).fill(CHALLENGES[7]), // -10m x3
-  CHALLENGES[8],                   // -50m x1 ← 3x smaller
-]
+// 2x each normal challenge (shuffled) + 1x -50m (3x smaller)
+function shuffleArray<T>(arr: T[]): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+const BASE_ITEMS = shuffleArray([
+  ...CHALLENGES.slice(0, 8).map(c => ({ ...c })),
+  ...CHALLENGES.slice(0, 8).map(c => ({ ...c })),
+])
+const WHEEL_ITEMS: Challenge[] = [...BASE_ITEMS, CHALLENGES[8]]
 
 interface Props {
   members: any[]
@@ -120,18 +121,28 @@ export default function WheelGame({ members, myUserId, onAwardDistance, onClose 
         ctx.stroke()
       }
 
-      // Emoji — only show if segment large enough
-      if (SEGMENT_SIZES[i] > 0.15) {
+      // Text label — only show if segment large enough
+      if (SEGMENT_SIZES[i] > 0.18) {
         ctx.save()
         ctx.translate(cx, cy)
         ctx.rotate(mid)
         ctx.textAlign = "right"
-        const fontSize = item.id === "moins50" ? SIZE * 0.045 : SIZE * 0.06
-        ctx.font = `${fontSize}px Arial`
+        // Short label for the wheel
+        const shortLabel = item.id === "moins50" ? "☠️ -50m" :
+          item.id === "shot" ? "Shot 🥃" :
+          item.id === "culsec" ? "Cul sec" :
+          item.id === "finir" ? "Finir 🍷" :
+          item.id === "distribuer" ? "5 gorgées" :
+          item.id === "designer" ? "Désigner" :
+          item.id === "toutlemonde" ? "Tous boivent" :
+          item.id === "plus10" ? "+10m 🚀" :
+          item.id === "moins10" ? "-10m 💀" : item.label
+        const fontSize = item.id === "moins50" ? SIZE * 0.038 : SIZE * 0.042
+        ctx.font = `bold ${fontSize}px 'Arial'`
         ctx.fillStyle = "#fff"
-        ctx.shadowColor = "rgba(0,0,0,0.8)"
-        ctx.shadowBlur = 4
-        ctx.fillText(item.emoji, R - 10, 5)
+        ctx.shadowColor = "rgba(0,0,0,0.9)"
+        ctx.shadowBlur = 5
+        ctx.fillText(shortLabel, R - 12, 5)
         ctx.restore()
       }
     })
@@ -233,23 +244,22 @@ export default function WheelGame({ members, myUserId, onAwardDistance, onClose 
     setResult(null)
 
     // Crypto random for spin amount
-    const arr = new Uint32Array(1)
+    const arr = new Uint32Array(2)
     crypto.getRandomValues(arr)
-    const extraSpins = 5 + (arr[0] % 8) // 5-12 full rotations
-    const extraAngle = (arr[0] % 1000) / 1000 * Math.PI * 2
+    const extraSpins = 4 + (arr[0] % 4) // 4-7 full rotations ≈ 2-3s
+    const extraAngle = (arr[1] % 1000) / 1000 * Math.PI * 2
     const totalAngle = extraSpins * Math.PI * 2 + extraAngle
 
-    velRef.current = totalAngle / 200 // initial velocity (spread over ~200 frames)
     const startAngle = angleRef.current
     let elapsed = 0
-    const DURATION = 200 + (arr[0] % 80) // variable duration
+    const DURATION = 120 + (arr[0] % 40) // 120-160 frames ≈ 2-2.7s
 
     const animate = () => {
       elapsed++
-      // Ease out — slow down progressively
       const t = elapsed / DURATION
-      const ease = 1 - Math.pow(t, 3)
-      const speed = (totalAngle / DURATION) * ease * 3
+      // Ease out quart — fast start, smooth stop
+      const ease = 1 - Math.pow(t, 4)
+      const speed = (totalAngle / DURATION) * ease * 4
       angleRef.current += speed
 
       // Tick sound when crossing a segment boundary
