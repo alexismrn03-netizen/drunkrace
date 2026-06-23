@@ -8,6 +8,7 @@ import DrinkTab from "./DrinkTab"
 import PhotoTab from "./PhotoTab"
 import AvatarEditor from "./AvatarEditor"
 import DuelGame from "./DuelGame"
+import RPSGame from "./RPSGame"
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 function memberDist(drinks: DrinkEntry[]) {
@@ -178,7 +179,7 @@ function RedFlagModal({ members, myId, groupId, onClose }: any) {
 }
 
 // ── RACE TRACK ───────────────────────────────────────────────────────────────
-function RaceTrack({ members, samMember, isCreator, group, events, onShowWheel, onRemoveSam, onEndRace, onRedFlag, onDuel, myId }: any) {
+function RaceTrack({ members, samMember, isCreator, group, events, onShowWheel, onRemoveSam, onEndRace, onRedFlag, onDuel, onRPS, myId }: any) {
   const drinkers = members.filter((m:any)=>m.user_id!==samMember?.user_id)
   const maxDist  = Math.max(...drinkers.map((m:any)=>memberDist(m.drinks)),10)
   const sorted   = [...drinkers].sort((a:any,b:any)=>memberDist(b.drinks)-memberDist(a.drinks))
@@ -234,7 +235,10 @@ function RaceTrack({ members, samMember, isCreator, group, events, onShowWheel, 
           🚩 Drapeau Rouge
         </button>
         <button onClick={onDuel} style={{flex:1,padding:"10px",borderRadius:12,border:"1px solid #3b1f6a",background:"#0f0f1a",cursor:"pointer",color:"#c084fc",fontSize:12,fontWeight:700}}>
-          🏎️ Duel de Shots
+          🏎️ Duel
+        </button>
+        <button onClick={onRPS} style={{flex:1,padding:"10px",borderRadius:12,border:"1px solid #1e3a8a",background:"#0c1a3a",cursor:"pointer",color:"#60a5fa",fontSize:12,fontWeight:700}}>
+          🤜 PFC
         </button>
       </div>
 
@@ -514,6 +518,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
   const [showWheel, setShowWheel]   = useState(false)
   const [showRedFlag, setShowRedFlag] = useState(false)
   const [showDuel, setShowDuel]       = useState(false)
+  const [showRPS, setShowRPS]         = useState(false)
   const [ended, setEnded]       = useState(group.status==="finished")
   const supabase = createClient()
 
@@ -590,6 +595,11 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
   const handleRemoveSam=async()=>{
     await supabase.from("group_members").update({is_sam:false,young_driver:false}).eq("group_id",group.id);loadMembers()
   }
+  const handleAwardSimple = async (userId: string, delta: number) => {
+    await supabase.from("race_events").insert({ group_id: group.id, type: delta > 0 ? "rps_win" : "rps_loss", target_user_id: userId, triggered_by: user.id, distance_delta: delta })
+    loadEvents()
+  }
+
   const handleAwardDistance = async (userId: string, delta: number, drink: any) => {
     const member = members.find((m:any) => m.user_id === userId)
     if (!member) return
@@ -637,7 +647,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
 
   return (
     <div style={{background:"#0a0a14",minHeight:"100vh",maxWidth:480,margin:"0 auto",position:"relative"}}>
-      {tab==="race"    && <RaceTrack members={members} samMember={samMember} isCreator={isCreator} group={group} events={events} onShowWheel={()=>setShowWheel(true)} onRemoveSam={handleRemoveSam} onEndRace={handleEndRace} onRedFlag={()=>setShowRedFlag(true)} onDuel={()=>setShowDuel(true)} myId={user.id}/>}
+      {tab==="race"    && <RaceTrack members={members} samMember={samMember} isCreator={isCreator} group={group} events={events} onShowWheel={()=>setShowWheel(true)} onRemoveSam={handleRemoveSam} onEndRace={handleEndRace} onRedFlag={()=>setShowRedFlag(true)} onDuel={()=>setShowDuel(true)} onRPS={()=>setShowRPS(true)} myId={user.id}/>}
       {tab==="drink"   && <DrinkTab myMember={myMember} samMember={samMember} onAddDrink={handleAddDrink} onUndo={handleUndo}/>}
       {tab==="stats"   && <StatsTab myMember={myMember} members={members} samMember={samMember} events={events}/>}
       {tab==="photo"   && <PhotoTab groupId={group.id} userId={user.id}/>}
@@ -646,6 +656,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
       {showWheel&&<SamWheel members={members} onSamChosen={handleSamChosen} onClose={()=>setShowWheel(false)}/>}
       {showRedFlag&&<RedFlagModal members={members} myId={user.id} groupId={group.id} onClose={()=>{setShowRedFlag(false);loadEvents()}}/>}
       {showDuel&&<DuelGame members={members} onAwardDistance={handleAwardDistance} onClose={()=>setShowDuel(false)}/>}
+      {showRPS&&<RPSGame members={members} onAwardDistance={handleAwardSimple} onClose={()=>setShowRPS(false)}/>}
     </div>
   )
 }
