@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react"
 import { DRINK_BASES, DRINK_CATEGORIES, alcoholGrams, calcDistance, type DrinkEntry } from "@/lib/drinks"
 
-type Phase = "setup" | "lights" | "p1" | "p2" | "result"
+type Phase = "setup" | "ready1" | "lights" | "p1" | "ready2" | "p2" | "result"
 
 interface Player {
   name: string
@@ -72,7 +72,7 @@ export default function DuelGame({ members, onAwardDistance, onClose }: Props) {
     }, 700)
   }
 
-  const startLights = () => startLightsAndTimer("p1")
+  const startLights = () => setPhase("ready1")
 
   const handlePress = () => {
     if (phase === "p1" && drinking) {
@@ -81,10 +81,10 @@ export default function DuelGame({ members, onAwardDistance, onClose }: Props) {
       setP1(prev => ({ ...prev, time }))
       setDrinking(false)
       setElapsed(time)
-      // Short pause then launch P2 lights
+      // Go to ready2 screen
       setTimeout(() => {
-        startLightsAndTimer("p2")
-      }, 1500)
+        setPhase("ready2")
+      }, 800)
     } else if (phase === "p2" && drinking) {
       // P2 stops
       const time = Date.now() - startTime
@@ -181,6 +181,55 @@ export default function DuelGame({ members, onAwardDistance, onClose }: Props) {
       </button>
     </div>
   )
+
+  // ── READY 1 ──────────────────────────────────────────────────────────────
+  if (phase === "ready1") {
+    const drink = DRINK_CATALOG.find(d => d.id === p1.drinkId)
+    return (
+      <div style={{ position:"fixed",inset:0,background:"#0a0a14",zIndex:400,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24 }}>
+        <div style={{ background:"#1c0505",border:"2px solid #ef4444",borderRadius:24,padding:"32px 24px",textAlign:"center",width:"100%",maxWidth:340,marginBottom:32 }}>
+          <div style={{ fontFamily:"'Bebas Neue',cursive",fontSize:16,color:"#ef4444",letterSpacing:3,marginBottom:8 }}>🔴 JOUEUR 1</div>
+          <div style={{ fontFamily:"'Bebas Neue',cursive",fontSize:28,color:"#e2e8f0",letterSpacing:2,marginBottom:16 }}>{p1.name || "Joueur 1"}</div>
+          <div style={{ background:"#0f0f1a",borderRadius:12,padding:"12px",marginBottom:8 }}>
+            <div style={{ fontSize:20,marginBottom:4 }}>{drink?.emoji}</div>
+            <div style={{ fontSize:14,color:"#e2e8f0",fontWeight:600 }}>{drink?.name} {p1.vol_cl}cl</div>
+            <div style={{ fontSize:11,color:"#6b7280" }}>{drink?.degree_pct}%</div>
+          </div>
+          <div style={{ fontSize:12,color:"#6b7280",marginTop:8 }}>Prends ton verre en main 🍺</div>
+        </div>
+        <button onClick={()=>startLightsAndTimer("p1")} style={{ width:"100%",maxWidth:340,padding:"20px",borderRadius:18,border:"none",cursor:"pointer",background:"linear-gradient(135deg,#ef4444,#dc2626)",color:"#fff",fontSize:20,fontWeight:700,fontFamily:"'Space Grotesk',sans-serif",boxShadow:"0 0 30px #ef444460" }}>
+          🚦 JE SUIS PRÊT !
+        </button>
+      </div>
+    )
+  }
+
+  // ── READY 2 ──────────────────────────────────────────────────────────────
+  if (phase === "ready2") {
+    const drink = DRINK_CATALOG.find(d => d.id === p2.drinkId)
+    return (
+      <div style={{ position:"fixed",inset:0,background:"#0a0a14",zIndex:400,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24 }}>
+        <div style={{ background:"#0c1a3a",border:"2px solid #3b82f6",borderRadius:24,padding:"32px 24px",textAlign:"center",width:"100%",maxWidth:340,marginBottom:16 }}>
+          <div style={{ fontFamily:"'Bebas Neue',cursive",fontSize:16,color:"#3b82f6",letterSpacing:3,marginBottom:8 }}>🔵 JOUEUR 2</div>
+          <div style={{ fontFamily:"'Bebas Neue',cursive",fontSize:28,color:"#e2e8f0",letterSpacing:2,marginBottom:16 }}>{p2.name || "Joueur 2"}</div>
+          <div style={{ background:"#0f0f1a",borderRadius:12,padding:"12px",marginBottom:8 }}>
+            <div style={{ fontSize:20,marginBottom:4 }}>{drink?.emoji}</div>
+            <div style={{ fontSize:14,color:"#e2e8f0",fontWeight:600 }}>{drink?.name} {p2.vol_cl}cl</div>
+            <div style={{ fontSize:11,color:"#6b7280" }}>{drink?.degree_pct}%</div>
+          </div>
+          <div style={{ fontSize:12,color:"#6b7280",marginTop:8 }}>Prends ton verre en main 🍺</div>
+        </div>
+        {/* Show P1 time */}
+        <div style={{ background:"#13131f",borderRadius:12,padding:"10px 20px",marginBottom:24,border:"1px solid #2a2a3e",textAlign:"center" }}>
+          <div style={{ fontSize:10,color:"#6b7280",marginBottom:2 }}>🔴 {p1.name} a fini en</div>
+          <div style={{ fontFamily:"'Bebas Neue',cursive",fontSize:22,color:"#ef4444" }}>{p1.time ? `${(p1.time/1000).toFixed(2)}s` : "?"}</div>
+        </div>
+        <button onClick={()=>startLightsAndTimer("p2")} style={{ width:"100%",maxWidth:340,padding:"20px",borderRadius:18,border:"none",cursor:"pointer",background:"linear-gradient(135deg,#3b82f6,#1d4ed8)",color:"#fff",fontSize:20,fontWeight:700,fontFamily:"'Space Grotesk',sans-serif",boxShadow:"0 0 30px #3b82f660" }}>
+          🚦 JE SUIS PRÊT !
+        </button>
+      </div>
+    )
+  }
 
   // ── LIGHTS PHASE ─────────────────────────────────────────────────────────
   if (phase === "lights") return (
