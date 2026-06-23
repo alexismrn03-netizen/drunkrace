@@ -19,10 +19,22 @@ const CHALLENGES: Challenge[] = [
   { id:"toutlemonde",label:"Tout le monde boit\nsauf toi !", emoji:"🎉", color:"#06b6d4", type:"social" },
   { id:"plus10",    label:"+10m sur la piste !",       emoji:"🚀", color:"#4ade80", type:"distance", delta: 10 },
   { id:"moins10",   label:"−10m sur la piste !",       emoji:"💀", color:"#f87171", type:"distance", delta: -10 },
+  { id:"moins50",   label:"−50m !!",                   emoji:"☠️", color:"#7f1d1d", type:"distance", delta: -50 },
 ]
 
-// Duplicate challenges for visual richness (wheel needs many segments)
-const WHEEL_ITEMS = [...CHALLENGES, ...CHALLENGES, ...CHALLENGES].slice(0, 16)
+// Weighted wheel: normal cases x3, -50m case x1 (3x smaller visually)
+// We do this by giving -50m 1 slot vs 3 slots for others
+const WHEEL_ITEMS: Challenge[] = [
+  ...Array(3).fill(CHALLENGES[0]), // shot x3
+  ...Array(3).fill(CHALLENGES[1]), // culsec x3
+  ...Array(3).fill(CHALLENGES[2]), // finir x3
+  ...Array(3).fill(CHALLENGES[3]), // distribuer x3
+  ...Array(3).fill(CHALLENGES[4]), // designer x3
+  ...Array(3).fill(CHALLENGES[5]), // toutlemonde x3
+  ...Array(3).fill(CHALLENGES[6]), // +10m x3
+  ...Array(3).fill(CHALLENGES[7]), // -10m x3
+  CHALLENGES[8],                   // -50m x1 ← 3x smaller
+]
 
 interface Props {
   members: any[]
@@ -50,7 +62,20 @@ export default function WheelGame({ members, myUserId, onAwardDistance, onClose 
   const cy = SIZE / 2
   const R = cx - 8
   const N = WHEEL_ITEMS.length
-  const slice = (2 * Math.PI) / N
+  // Normal segments get 1 unit, -50m gets 1/3 unit
+  const WEIGHTS = WHEEL_ITEMS.map(item => item.id === "moins50" ? 1/3 : 1)
+  const TOTAL_WEIGHT = WEIGHTS.reduce((s, w) => s + w, 0)
+  // Precompute start angles for each segment
+  const SEGMENT_ANGLES: number[] = []
+  const SEGMENT_SIZES: number[] = []
+  let acc = 0
+  WHEEL_ITEMS.forEach((_, i) => {
+    SEGMENT_ANGLES.push(acc)
+    const size = (WEIGHTS[i] / TOTAL_WEIGHT) * 2 * Math.PI
+    SEGMENT_SIZES.push(size)
+    acc += size
+  })
+  const slice = (2 * Math.PI) / N // kept for compat
 
   const draw = (angle: number) => {
     const canvas = canvasRef.current
@@ -69,33 +94,46 @@ export default function WheelGame({ members, myUserId, onAwardDistance, onClose 
     ctx.stroke()
     ctx.restore()
 
-    // Segments
+    // Segments — variable sizes
     WHEEL_ITEMS.forEach((item, i) => {
-      const start = angle + i * slice
-      const end = start + slice
+      const start = angle + SEGMENT_ANGLES[i]
+      const end = start + SEGMENT_SIZES[i]
+      const mid = start + SEGMENT_SIZES[i] / 2
 
       // Segment fill
       ctx.beginPath()
       ctx.moveTo(cx, cy)
       ctx.arc(cx, cy, R, start, end)
       ctx.closePath()
-      ctx.fillStyle = item.color + "cc"
-      ctx.fill()
-      ctx.strokeStyle = "#0a0a14"
-      ctx.lineWidth = 2
-      ctx.stroke()
+      // Special styling for -50m
+      if (item.id === "moins50") {
+        ctx.fillStyle = "#7f1d1d"
+        ctx.fill()
+        ctx.strokeStyle = "#ef4444"
+        ctx.lineWidth = 3
+        ctx.stroke()
+      } else {
+        ctx.fillStyle = item.color + "cc"
+        ctx.fill()
+        ctx.strokeStyle = "#0a0a14"
+        ctx.lineWidth = 2
+        ctx.stroke()
+      }
 
-      // Emoji text
-      ctx.save()
-      ctx.translate(cx, cy)
-      ctx.rotate(start + slice / 2)
-      ctx.textAlign = "right"
-      ctx.font = `${SIZE * 0.06}px Arial`
-      ctx.fillStyle = "#fff"
-      ctx.shadowColor = "rgba(0,0,0,0.7)"
-      ctx.shadowBlur = 4
-      ctx.fillText(item.emoji, R - 10, 5)
-      ctx.restore()
+      // Emoji — only show if segment large enough
+      if (SEGMENT_SIZES[i] > 0.15) {
+        ctx.save()
+        ctx.translate(cx, cy)
+        ctx.rotate(mid)
+        ctx.textAlign = "right"
+        const fontSize = item.id === "moins50" ? SIZE * 0.045 : SIZE * 0.06
+        ctx.font = `${fontSize}px Arial`
+        ctx.fillStyle = "#fff"
+        ctx.shadowColor = "rgba(0,0,0,0.8)"
+        ctx.shadowBlur = 4
+        ctx.fillText(item.emoji, R - 10, 5)
+        ctx.restore()
+      }
     })
 
     // Center circle
@@ -138,10 +176,14 @@ export default function WheelGame({ members, myUserId, onAwardDistance, onClose 
   }, [])
 
   const getResult = (angle: number): Challenge => {
-    // Pointer is at top (−π/2). Normalize angle.
+    // Pointer is at top (-π/2). Find which segment is under the pointer.
     const norm = ((-angle - Math.PI / 2) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI)
-    const idx = Math.floor(norm / slice) % N
-    return WHEEL_ITEMS[idx]
+    for (let i = 0; i < N; i++) {
+      const start = SEGMENT_ANGLES[i]
+      const end = start + SEGMENT_SIZES[i]
+      if (norm >= start && norm < end) return WHEEL_ITEMS[i]
+    }
+    return WHEEL_ITEMS[0]
   }
 
   // Sound: ticking
