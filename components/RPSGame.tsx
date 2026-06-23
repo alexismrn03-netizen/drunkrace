@@ -119,25 +119,27 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
 
   // Submit my choice
   const submitChoice = async (c: Choice) => {
-    setMyChoice(c)
     if (modeSelected === "local") {
       if (isLocalP1) {
-        // P1 chose — save to ref AND state
+        // P1 chose — save to ref AND state, do NOT overwrite with P2 later
         p1ChoiceRef.current = c
-        setMyChoice(c)
+        setMyChoice(c)          // myChoice = P1's choice
         setIsLocalP1(false)
         setPhase("ready_p2")
       } else {
-        // P2 chose — use ref to get P1's choice (state might be stale)
+        // P2 chose — read P1 from ref (state safe), save P2 separately
         const p1c = p1ChoiceRef.current
-        setLocalP2Choice(c)
+        setLocalP2Choice(c)     // localP2Choice = P2's choice
         setOpponentChoice(c)
+        // DO NOT call setMyChoice here — it would overwrite P1's choice!
         const w = getWinner(p1c, c)
         setResult(w === "draw" ? "draw" : w === "p1" ? "win_p1" : "win_p2")
         setPhase("result")
       }
       return
     }
+    // Online mode — my choice is always me
+    setMyChoice(c)
     if (isChallenger) {
       // P1 chose → save and wait for P2
       await supabase.from("game_invites").update({
