@@ -7,19 +7,20 @@ interface Challenge {
   emoji: string
   color: string
   type: "drink" | "distance" | "social"
-  delta?: number // for distance challenges
+  delta?: number
+  needsTarget?: boolean
 }
 
 const CHALLENGES: Challenge[] = [
-  { id:"shot",      label:"Boire un shot !",           emoji:"🥃", color:"#ef4444", type:"drink" },
-  { id:"culsec",    label:"Cul sec !",                 emoji:"🍺", color:"#f97316", type:"drink" },
-  { id:"finir",     label:"Finir son verre !",         emoji:"🍷", color:"#ec4899", type:"drink" },
-  { id:"distribuer",label:"Distribuer 5 gorgées",      emoji:"🫵", color:"#a855f7", type:"social" },
-  { id:"designer",  label:"Désigner quelqu'un",        emoji:"👆", color:"#8b5cf6", type:"social" },
-  { id:"toutlemonde",label:"Tout le monde boit\nsauf toi !", emoji:"🎉", color:"#06b6d4", type:"social" },
-  { id:"plus10",    label:"+10m sur la piste !",       emoji:"🚀", color:"#4ade80", type:"distance", delta: 10 },
-  { id:"moins10",   label:"−10m sur la piste !",       emoji:"💀", color:"#f87171", type:"distance", delta: -10 },
-  { id:"moins50",   label:"−50m !!",                   emoji:"☠️", color:"#7f1d1d", type:"distance", delta: -50 },
+  { id:"shot",       label:"Boire un shot !",              emoji:"🥃", color:"#ef4444", type:"drink" },
+  { id:"culsec",     label:"Cul sec !",                    emoji:"🍺", color:"#f97316", type:"drink" },
+  { id:"finir",      label:"Finir son verre !",            emoji:"🍷", color:"#ec4899", type:"drink" },
+  { id:"distribuer", label:"Distribue 5 gorgées",          emoji:"✋", color:"#a855f7", type:"social", needsTarget:true },
+  { id:"designer",   label:"Désigne quelqu'un",            emoji:"👆", color:"#8b5cf6", type:"social", needsTarget:true },
+  { id:"toutlemonde",label:"Tout le monde boit !",         emoji:"🎉", color:"#06b6d4", type:"social" },
+  { id:"plus10",     label:"+10m sur la piste !",          emoji:"🚀", color:"#4ade80", type:"distance", delta: 10 },
+  { id:"moins10",    label:"−10m sur la piste !",          emoji:"💀", color:"#f87171", type:"distance", delta: -10 },
+  { id:"moins50",    label:"−50m !!!",                     emoji:"☠️", color:"#7f1d1d", type:"distance", delta: -50, needsTarget:true },
 ]
 
 // 2x each normal challenge (shuffled) + 1x -50m (3x smaller)
@@ -78,6 +79,233 @@ export default function WheelGame({ members, myUserId, onAwardDistance, onClose 
   })
   const slice = (2 * Math.PI) / N // kept for compat
 
+  const drawWheelIcon = (ctx: CanvasRenderingContext2D, id: string, color: string, s: number) => {
+    ctx.save()
+    ctx.shadowColor = color
+    ctx.shadowBlur = s * 0.4
+    switch(id) {
+      case "shot": {
+        // Simple shot glass silhouette
+        ctx.strokeStyle = color; ctx.lineWidth = s*0.15; ctx.lineCap = "round"
+        ctx.beginPath()
+        ctx.moveTo(-s*0.4, -s*0.6)
+        ctx.lineTo(-s*0.5, s*0.5)
+        ctx.lineTo(s*0.5, s*0.5)
+        ctx.lineTo(s*0.4, -s*0.6)
+        ctx.closePath()
+        ctx.strokeStyle = color; ctx.stroke()
+        ctx.fillStyle = color + "66"; ctx.fill()
+        // Liquid
+        ctx.fillStyle = color
+        ctx.beginPath()
+        ctx.moveTo(-s*0.25, s*0.0)
+        ctx.lineTo(-s*0.45, s*0.5)
+        ctx.lineTo(s*0.45, s*0.5)
+        ctx.lineTo(s*0.25, s*0.0)
+        ctx.closePath()
+        ctx.fill()
+        break
+      }
+      case "culsec": {
+        // Upside down glass + drops
+        ctx.strokeStyle = color; ctx.lineWidth = s*0.12
+        ctx.beginPath()
+        ctx.moveTo(-s*0.4, -s*0.5)
+        ctx.lineTo(-s*0.5, s*0.3)
+        ctx.lineTo(s*0.5, s*0.3)
+        ctx.lineTo(s*0.4, -s*0.5)
+        ctx.closePath()
+        ctx.stroke()
+        ctx.fillStyle = color + "22"; ctx.fill()
+        // Arrow down
+        ctx.strokeStyle = color; ctx.lineWidth = s*0.18
+        ctx.beginPath(); ctx.moveTo(0, s*0.35); ctx.lineTo(0, s*0.75); ctx.stroke()
+        ctx.beginPath()
+        ctx.moveTo(-s*0.25, s*0.55); ctx.lineTo(0, s*0.78); ctx.lineTo(s*0.25, s*0.55)
+        ctx.strokeStyle = color; ctx.lineWidth = s*0.16; ctx.lineJoin = "round"; ctx.stroke()
+        break
+      }
+      case "finir": {
+        // Wine glass full
+        ctx.strokeStyle = color; ctx.lineWidth = s*0.12
+        ctx.beginPath()
+        ctx.moveTo(-s*0.45, -s*0.6)
+        ctx.bezierCurveTo(-s*0.55, s*0.1, -s*0.28, s*0.3, 0, s*0.3)
+        ctx.bezierCurveTo(s*0.28, s*0.3, s*0.55, s*0.1, s*0.45, -s*0.6)
+        ctx.closePath()
+        ctx.stroke()
+        ctx.fillStyle = color + "55"; ctx.fill()
+        // Full liquid
+        ctx.fillStyle = color + "cc"
+        ctx.beginPath()
+        ctx.moveTo(-s*0.35, -s*0.15)
+        ctx.bezierCurveTo(-s*0.45, s*0.12, -s*0.24, s*0.3, 0, s*0.3)
+        ctx.bezierCurveTo(s*0.24, s*0.3, s*0.45, s*0.12, s*0.35, -s*0.15)
+        ctx.closePath()
+        ctx.fill()
+        // Stem
+        ctx.beginPath(); ctx.moveTo(0, s*0.3); ctx.lineTo(0, s*0.65)
+        ctx.strokeStyle = color; ctx.lineWidth = s*0.1; ctx.stroke()
+        // Base
+        ctx.beginPath(); ctx.ellipse(0, s*0.65, s*0.35, s*0.1, 0, 0, Math.PI*2)
+        ctx.fillStyle = color + "88"; ctx.fill()
+        break
+      }
+      case "distribuer": {
+        // Neon hand ✋ style
+        const hw = s * 0.18
+        // Palm
+        ctx.fillStyle = color + "33"
+        ctx.strokeStyle = color; ctx.lineWidth = s*0.1; ctx.lineCap = "round"; ctx.lineJoin = "round"
+        ctx.beginPath()
+        ctx.ellipse(0, s*0.25, s*0.42, s*0.32, 0, 0, Math.PI*2)
+        ctx.fill()
+        // Neon glow effect on palm
+        ctx.shadowColor = color; ctx.shadowBlur = s*0.5
+        ctx.strokeStyle = color; ctx.lineWidth = s*0.08
+        ctx.beginPath()
+        ctx.ellipse(0, s*0.25, s*0.38, s*0.28, 0, 0, Math.PI*2)
+        ctx.stroke()
+        // 5 fingers as neon lines
+        const fingers = [
+          [-s*0.35, -s*0.55, s*0.06],
+          [-s*0.17, -s*0.68, s*0.06],
+          [0, -s*0.72, s*0.06],
+          [s*0.17, -s*0.65, s*0.06],
+          [s*0.33, -s*0.48, s*0.06],
+        ]
+        fingers.forEach(([fx, fy, fw]) => {
+          ctx.strokeStyle = color; ctx.lineWidth = s*0.12
+          ctx.beginPath()
+          ctx.moveTo(fx, s*0.05)
+          ctx.lineTo(fx, fy)
+          ctx.stroke()
+          // Fingertip dot
+          ctx.fillStyle = color
+          ctx.beginPath(); ctx.arc(fx, fy, s*0.07, 0, Math.PI*2); ctx.fill()
+        })
+        break
+      }
+      case "designer": {
+        // Target + arrow
+        ;[s*0.55, s*0.38, s*0.2].forEach((r, i) => {
+          ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2)
+          ctx.strokeStyle = i===2 ? color : color + (i===0?"44":"88")
+          ctx.lineWidth = s*0.09; ctx.stroke()
+        })
+        ctx.fillStyle = color
+        ctx.beginPath(); ctx.arc(0, 0, s*0.12, 0, Math.PI*2); ctx.fill()
+        // Arrow from top-left
+        ctx.strokeStyle = "#fff"; ctx.lineWidth = s*0.1; ctx.lineCap = "round"
+        ctx.beginPath(); ctx.moveTo(-s*0.65, -s*0.65); ctx.lineTo(-s*0.15, -s*0.15); ctx.stroke()
+        ctx.fillStyle = "#fff"
+        ctx.beginPath()
+        ctx.moveTo(-s*0.1, -s*0.1)
+        ctx.lineTo(-s*0.45, -s*0.22)
+        ctx.lineTo(-s*0.22, -s*0.45)
+        ctx.closePath(); ctx.fill()
+        break
+      }
+      case "toutlemonde": {
+        // Multiple figures around a central cup
+        const poses = [[-s*0.5,-s*0.2],[s*0.5,-s*0.2],[-s*0.3,-s*0.6],[s*0.3,-s*0.6]]
+        poses.forEach(([px,py]) => {
+          // Head
+          ctx.fillStyle = color + "cc"
+          ctx.beginPath(); ctx.arc(px, py, s*0.14, 0, Math.PI*2); ctx.fill()
+          // Body line
+          ctx.strokeStyle = color + "cc"; ctx.lineWidth = s*0.08
+          ctx.beginPath(); ctx.moveTo(px, py+s*0.14); ctx.lineTo(px, py+s*0.38); ctx.stroke()
+          // Arrow to center
+          ctx.strokeStyle = color + "66"; ctx.lineWidth = s*0.06
+          const angle = Math.atan2(-py, -px)
+          ctx.beginPath()
+          ctx.moveTo(px + Math.cos(angle)*s*0.22, py + Math.sin(angle)*s*0.22)
+          ctx.lineTo(px + Math.cos(angle)*s*0.48, py + Math.sin(angle)*s*0.48)
+          ctx.stroke()
+        })
+        // Central cup
+        ctx.strokeStyle = color; ctx.lineWidth = s*0.1; ctx.fillStyle = color + "44"
+        ctx.beginPath()
+        ctx.moveTo(-s*0.22, -s*0.28); ctx.lineTo(-s*0.28, s*0.18)
+        ctx.lineTo(s*0.28, s*0.18); ctx.lineTo(s*0.22, -s*0.28); ctx.closePath()
+        ctx.fill(); ctx.stroke()
+        // Foam top
+        ctx.fillStyle = "#fff"; ctx.globalAlpha = 0.8
+        ctx.beginPath(); ctx.ellipse(0, -s*0.28, s*0.22, s*0.08, 0, 0, Math.PI*2); ctx.fill()
+        ctx.globalAlpha = 1
+        break
+      }
+      case "plus10": {
+        // Bold up arrow neon
+        ctx.shadowColor = color; ctx.shadowBlur = s*0.6
+        ctx.fillStyle = color; ctx.strokeStyle = "#fff"; ctx.lineWidth = s*0.05
+        // Arrow shape
+        ctx.beginPath()
+        ctx.moveTo(0, -s*0.8)
+        ctx.lineTo(s*0.45, -s*0.15)
+        ctx.lineTo(s*0.22, -s*0.15)
+        ctx.lineTo(s*0.22, s*0.5)
+        ctx.lineTo(-s*0.22, s*0.5)
+        ctx.lineTo(-s*0.22, -s*0.15)
+        ctx.lineTo(-s*0.45, -s*0.15)
+        ctx.closePath()
+        ctx.fill(); ctx.stroke()
+        // +10 text
+        ctx.shadowBlur = 0; ctx.fillStyle = "#0a0a14"
+        ctx.font = `bold ${s*0.35}px Arial`; ctx.textAlign = "center"
+        ctx.fillText("+10", 0, s*0.35)
+        break
+      }
+      case "moins10": {
+        // Down arrow neon
+        ctx.shadowColor = color; ctx.shadowBlur = s*0.6
+        ctx.fillStyle = color; ctx.strokeStyle = "#fff"; ctx.lineWidth = s*0.05
+        ctx.beginPath()
+        ctx.moveTo(0, s*0.8)
+        ctx.lineTo(s*0.45, s*0.15)
+        ctx.lineTo(s*0.22, s*0.15)
+        ctx.lineTo(s*0.22, -s*0.5)
+        ctx.lineTo(-s*0.22, -s*0.5)
+        ctx.lineTo(-s*0.22, s*0.15)
+        ctx.lineTo(-s*0.45, s*0.15)
+        ctx.closePath()
+        ctx.fill(); ctx.stroke()
+        ctx.shadowBlur = 0; ctx.fillStyle = "#0a0a14"
+        ctx.font = `bold ${s*0.35}px Arial`; ctx.textAlign = "center"
+        ctx.fillText("-10", 0, -s*0.2)
+        break
+      }
+      case "moins50": {
+        // Skull neon red
+        ctx.shadowColor = color; ctx.shadowBlur = s*0.8
+        // Dome
+        ctx.fillStyle = "#fff"; ctx.strokeStyle = color; ctx.lineWidth = s*0.12
+        ctx.beginPath()
+        ctx.arc(0, -s*0.15, s*0.48, Math.PI, 0)
+        ctx.lineTo(s*0.35, s*0.1)
+        ctx.bezierCurveTo(s*0.35, s*0.32, -s*0.35, s*0.32, -s*0.35, s*0.1)
+        ctx.closePath(); ctx.fill(); ctx.stroke()
+        // Eyes hollow
+        ctx.fillStyle = color; ctx.shadowBlur = s*0.4
+        ;[-s*0.2, s*0.2].forEach(ex => {
+          ctx.beginPath(); ctx.ellipse(ex, -s*0.2, s*0.13, s*0.16, 0, 0, Math.PI*2); ctx.fill()
+        })
+        // Teeth
+        ctx.fillStyle = color; ctx.shadowBlur = 0
+        ;[-s*0.24,-s*0.08,s*0.08,s*0.24].forEach(tx => {
+          ctx.fillRect(tx-s*0.07, s*0.1, s*0.12, s*0.22)
+        })
+        // -50 text
+        ctx.fillStyle = "#fff"; ctx.shadowColor = color; ctx.shadowBlur = s*0.4
+        ctx.font = `bold ${s*0.38}px Arial`; ctx.textAlign = "center"
+        ctx.fillText("-50", 0, s*0.78)
+        break
+      }
+    }
+    ctx.restore()
+  }
+
   const draw = (angle: number) => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -121,28 +349,16 @@ export default function WheelGame({ members, myUserId, onAwardDistance, onClose 
         ctx.stroke()
       }
 
-      // Text label — only show if segment large enough
+        // Symbol icon on each segment
       if (SEGMENT_SIZES[i] > 0.18) {
         ctx.save()
         ctx.translate(cx, cy)
         ctx.rotate(mid)
-        ctx.textAlign = "right"
-        // Short label for the wheel
-        const shortLabel = item.id === "moins50" ? "☠️ -50m" :
-          item.id === "shot" ? "Shot 🥃" :
-          item.id === "culsec" ? "Cul sec" :
-          item.id === "finir" ? "Finir 🍷" :
-          item.id === "distribuer" ? "5 gorgées" :
-          item.id === "designer" ? "Désigner" :
-          item.id === "toutlemonde" ? "Tous boivent" :
-          item.id === "plus10" ? "+10m 🚀" :
-          item.id === "moins10" ? "-10m 💀" : item.label
-        const fontSize = item.id === "moins50" ? SIZE * 0.038 : SIZE * 0.042
-        ctx.font = `bold ${fontSize}px 'Arial'`
-        ctx.fillStyle = "#fff"
-        ctx.shadowColor = "rgba(0,0,0,0.9)"
-        ctx.shadowBlur = 5
-        ctx.fillText(shortLabel, R - 12, 5)
+        // Move to middle of segment (radial center)
+        const iconR = R * 0.62
+        ctx.translate(iconR, 0)
+        ctx.rotate(Math.PI / 2) // face outward
+        drawWheelIcon(ctx, item.id, item.color, SIZE * 0.085)
         ctx.restore()
       }
     })
@@ -282,7 +498,7 @@ export default function WheelGame({ members, myUserId, onAwardDistance, onClose 
         setResult(finalResult)
         playResult()
 
-        if (finalResult.id === "designer") {
+        if (finalResult.needsTarget) {
           setShowDesignate(true)
         }
       }
@@ -295,7 +511,9 @@ export default function WheelGame({ members, myUserId, onAwardDistance, onClose 
   const applyAndClose = () => {
     if (!result) { onClose(); return }
     if (result.type === "distance" && result.delta) {
-      onAwardDistance(myUserId, result.delta)
+      // If needsTarget and target selected, apply to target; else to self
+      const targetId = result.needsTarget && targetPlayer ? targetPlayer.user_id : myUserId
+      onAwardDistance(targetId, result.delta)
     }
     onClose()
   }
@@ -307,12 +525,17 @@ export default function WheelGame({ members, myUserId, onAwardDistance, onClose 
   }
 
   // ── DESIGNATE PLAYER ──────────────────────────────────────────────────────
+  const designateTitle = result?.id === "distribuer" ? "✋ Distribuer à qui ?" :
+    result?.id === "moins50" ? "☠️ Qui perd −50m ?" : "👆 Désigner quelqu'un"
+  const designateDesc = result?.id === "distribuer" ? "Choisis qui reçoit les 5 gorgées" :
+    result?.id === "moins50" ? "Désigne la victime des −50m !" : "Qui doit boire ?"
+
   if (showDesignate) return (
     <div style={BG}>
-      <h2 style={{ fontFamily:"'Bebas Neue',cursive", fontSize:26, letterSpacing:3, color:"#c084fc", margin:"0 0 8px" }}>
-        👆 Désigner quelqu'un
+      <h2 style={{ fontFamily:"'Bebas Neue',cursive", fontSize:26, letterSpacing:3, color:result?.color||"#c084fc", margin:"0 0 8px" }}>
+        {designateTitle}
       </h2>
-      <p style={{ color:"#6b7280", fontSize:12, margin:"0 0 24px" }}>Qui doit boire ?</p>
+      <p style={{ color:"#6b7280", fontSize:12, margin:"0 0 24px" }}>{designateDesc}</p>
       <div style={{ width:"100%", maxWidth:360, display:"flex", flexDirection:"column" as const, gap:10, marginBottom:24 }}>
         {members.filter(m => m.user_id !== myUserId && !m.is_sam).map((m: any) => (
           <button key={m.user_id} onClick={() => { setTargetPlayer(m); setShowDesignate(false) }}
@@ -356,12 +579,12 @@ export default function WheelGame({ members, myUserId, onAwardDistance, onClose 
           <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize: 22, color: result.color, letterSpacing: 2, marginBottom: 4, whiteSpace:"pre-line" as const }}>
             {result.label}
           </div>
-          {targetPlayer && result.id === "designer" && (
+          {targetPlayer && result.needsTarget && (
             <div style={{ fontSize: 14, color: "#e2e8f0", marginTop: 8, fontWeight: 700 }}>
-              👉 {targetPlayer.pseudo} doit boire !
+              👉 {targetPlayer.pseudo}{result.id==="distribuer"?" reçoit les 5 gorgées !":result.id==="moins50"?" perd −50m ☠️":" doit boire !"}
             </div>
           )}
-          {result.id === "designer" && !targetPlayer && (
+          {result.needsTarget && !targetPlayer && (
             <button onClick={() => setShowDesignate(true)}
               style={{ marginTop: 10, padding: "8px 20px", borderRadius: 10, border: "none", cursor: "pointer", background: result.color, color: "#fff", fontSize: 13, fontWeight: 700 }}>
               👆 Choisir qui
