@@ -139,16 +139,15 @@ function RaceTrack({ members, samMember, isCreator, group, onShowWheel, onRemove
           const st=getBACStatus(bac)
           return (
             <div key={member.user_id} style={{ marginBottom:i<sorted.length-1?10:0 }}>
-              <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4 }}>
-                <div style={{ display:"flex",alignItems:"center",gap:6 }}>
-                  {i===0&&<span style={{ fontSize:12 }}>👑</span>}
-                  <span style={{ fontSize:14 }}>{member.avatar}</span>
-                  <span style={{ fontSize:12,fontWeight:600,color:member.isMe?"#c084fc":"#d1d5db" }}>{member.pseudo}{member.isMe?" (moi)":""}</span>
-                  <span style={{ fontSize:10,color:st.color }}>{st.emoji}</span>
+              <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4,gap:4 }}>
+                <div style={{ display:"flex",alignItems:"center",gap:4,minWidth:0,flex:1 }}>
+                  {i===0&&<span style={{ fontSize:11,flexShrink:0 }}>👑</span>}
+                  <span style={{ fontSize:11,fontWeight:600,color:member.isMe?"#c084fc":"#d1d5db",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const }}>{member.pseudo}{member.isMe?" (moi)":""}</span>
+                  <span style={{ fontSize:10,color:st.color,flexShrink:0 }}>{st.emoji}</span>
                 </div>
-                <div style={{ display:"flex",gap:8 }}>
-                  <span style={{ fontSize:10,color:"#6b7280" }}>{bac.toFixed(2)}‰</span>
-                  <span style={{ fontSize:11,fontWeight:700,color:member.color }}>{dist.toFixed(1)}m</span>
+                <div style={{ display:"flex",gap:6,flexShrink:0,alignItems:"center" }}>
+                  <span style={{ fontSize:10,color:"#6b7280",whiteSpace:"nowrap" as const }}>{bac.toFixed(2)}‰</span>
+                  <span style={{ fontSize:11,fontWeight:700,color:member.color,whiteSpace:"nowrap" as const }}>{dist.toFixed(1)}m</span>
                 </div>
               </div>
               <div style={{ position:"relative",height:42,background:"#1f2937",borderRadius:8,overflow:"hidden",boxShadow:"inset 0 2px 6px rgba(0,0,0,.4)" }}>
@@ -158,8 +157,8 @@ function RaceTrack({ members, samMember, isCreator, group, onShowWheel, onRemove
                 <div style={{ position:"absolute",right:0,top:0,bottom:0,width:6,background:"repeating-linear-gradient(180deg,#ef4444 0,#ef4444 6px,#fff 6px,#fff 12px)",borderRadius:"0 8px 8px 0" }}/>
                 {[25,50,75].map(p=><div key={p} style={{ position:"absolute",left:`${p}%`,top:0,bottom:0,width:1,background:"#ffffff12" }}/>)}
                 <div style={{ position:"absolute",left:6,top:0,bottom:0,width:`calc(${pct}% - 6px)`,background:`linear-gradient(90deg,${member.color}25,${member.color}55)`,transition:"width 0.9s cubic-bezier(.34,1.2,.64,1)",borderRadius:"0 4px 4px 0" }}/>
-                <div style={{ position:"absolute",left:`calc(${pct}% - 18px)`,top:"50%",transform:"translateY(-50%)",transition:"left 0.9s cubic-bezier(.34,1.2,.64,1)",zIndex:2 }}>
-                  <DrunkAvatar avatarIndex={parseInt(member.avatar)||0} color={member.color} bac={bac} size={36} isMe={member.isMe}/>
+                <div style={{ position:"absolute",left:`calc(${pct}% - 14px)`,top:"50%",transform:"translateY(-50%)",transition:"left 0.9s cubic-bezier(.34,1.2,.64,1)",zIndex:2,pointerEvents:"none" as const }}>
+                  <DrunkAvatar avatarIndex={parseInt(member.avatar)||0} color={member.color} bac={bac} size={28} animate={true} isMe={member.isMe}/>
                 </div>
               </div>
             </div>
@@ -178,7 +177,7 @@ function RaceTrack({ members, samMember, isCreator, group, onShowWheel, onRemove
           return (
             <div key={m.user_id} style={{ display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:i<sorted.length-1?"1px solid #1a1a2a":"none" }}>
               <span style={{ fontSize:18,minWidth:26 }}>{medals[i]||"·"}</span>
-              <DrunkAvatar avatarIndex={parseInt(m.avatar)||0} color={m.color} bac={calcCurrentBAC(m.drinks,m.weight_kg,m.sex)} size={32}/>
+              <DrunkAvatar avatarIndex={parseInt(m.avatar)||0} color={m.color} bac={calcCurrentBAC(m.drinks,m.weight_kg,m.sex)} size={36} animate={false}/>
               <div style={{ flex:1 }}>
                 <div style={{ fontWeight:600,fontSize:13,color:m.isMe?"#c084fc":"#e2e8f0" }}>{m.pseudo}</div>
                 <div style={{ fontSize:10,color:st.color }}>{st.label}</div>
@@ -191,7 +190,7 @@ function RaceTrack({ members, samMember, isCreator, group, onShowWheel, onRemove
           )
         })}
         {samMember&&<div style={{ display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderTop:"1px solid #1a1a2a",marginTop:4 }}>
-          <span style={{ fontSize:18,minWidth:26 }}>🚗</span><span style={{ fontSize:20 }}>{samMember.avatar}</span>
+          <span style={{ fontSize:18,minWidth:26 }}>🚗</span><DrunkAvatar avatarIndex={parseInt(samMember.avatar)||0} color="#4ade80" bac={0} size={36} animate={false}/>
           <div style={{ flex:1 }}><div style={{ fontWeight:600,fontSize:13,color:"#4ade80" }}>{samMember.pseudo}</div><div style={{ fontSize:10,color:"#4ade80" }}>SAM — Héros de la soirée</div></div>
           <div style={{ fontSize:12,fontWeight:700,color:"#4ade80" }}>0.00‰</div>
         </div>}

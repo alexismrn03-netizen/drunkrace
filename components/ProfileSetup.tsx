@@ -35,7 +35,7 @@ export default function ProfileSetup({ user, onDone }: { user: any, onDone: () =
   return (
     <div style={S.wrap}>
       <div style={{ textAlign:"center",marginBottom:28 }}>
-        <DrunkAvatar avatarIndex={avatar} color="#a855f7" bac={0} size={80}/>
+        <DrunkAvatar avatarIndex={avatar} color="#a855f7" bac={0} size={90} animate={false}/>
         <h1 style={{ fontFamily:"'Bebas Neue',cursive",fontSize:28,letterSpacing:3,background:"linear-gradient(135deg,#c084fc,#ec4899)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",margin:0 }}>
           Créer mon profil
         </h1>

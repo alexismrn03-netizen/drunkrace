@@ -1,336 +1,231 @@
 "use client"
 import { useEffect, useRef } from "react"
 
-// SVG avatars top-down view
-const AVATAR_DESIGNS = [
-  // Wolf 🐺
-  (color: string) => `
-    <circle cx="50" cy="50" r="38" fill="${color}22" stroke="${color}" stroke-width="2"/>
-    <ellipse cx="50" cy="42" rx="22" ry="20" fill="${color}"/>
-    <ellipse cx="36" cy="28" rx="9" ry="12" fill="${color}" transform="rotate(-15 36 28)"/>
-    <ellipse cx="64" cy="28" rx="9" ry="12" fill="${color}" transform="rotate(15 64 28)"/>
-    <ellipse cx="36" cy="27" rx="5" ry="7" fill="#ec4899" transform="rotate(-15 36 27)"/>
-    <ellipse cx="64" cy="27" rx="5" ry="7" fill="#ec4899" transform="rotate(15 64 27)"/>
-    <circle cx="43" cy="40" r="4" fill="#1a1a2e"/>
-    <circle cx="57" cy="40" r="4" fill="#1a1a2e"/>
-    <circle cx="44" cy="39" r="1.5" fill="white"/>
-    <circle cx="58" cy="39" r="1.5" fill="white"/>
-    <ellipse cx="50" cy="47" rx="7" ry="5" fill="${color}dd"/>
-    <circle cx="50" cy="48" r="3" fill="#1a1a2e88"/>
-    <ellipse cx="50" cy="68" rx="12" ry="8" fill="${color}"/>
-    <ellipse cx="32" cy="62" rx="8" ry="5" fill="${color}" transform="rotate(20 32 62)"/>
-    <ellipse cx="68" cy="62" rx="8" ry="5" fill="${color}" transform="rotate(-20 68 62)"/>
-  `,
-  // Fox 🦊  
-  (color: string) => `
-    <circle cx="50" cy="50" r="38" fill="${color}22" stroke="${color}" stroke-width="2"/>
-    <ellipse cx="50" cy="44" rx="20" ry="18" fill="${color}"/>
-    <polygon points="38,18 30,38 46,32" fill="${color}"/>
-    <polygon points="62,18 70,38 54,32" fill="${color}"/>
-    <polygon points="40,20 33,36 47,32" fill="#fbbf24"/>
-    <polygon points="60,20 67,36 53,32" fill="#fbbf24"/>
-    <ellipse cx="50" cy="48" rx="14" ry="12" fill="#fef3c7"/>
-    <circle cx="44" cy="41" r="4" fill="#1a1a2e"/>
-    <circle cx="56" cy="41" r="4" fill="#1a1a2e"/>
-    <circle cx="45" cy="40" r="1.5" fill="white"/>
-    <circle cx="57" cy="40" r="1.5" fill="white"/>
-    <ellipse cx="50" cy="48" rx="5" ry="4" fill="#f87171"/>
-    <ellipse cx="50" cy="68" rx="10" ry="7" fill="${color}"/>
-    <ellipse cx="33" cy="63" rx="7" ry="4" fill="${color}" transform="rotate(25 33 63)"/>
-    <ellipse cx="67" cy="63" rx="7" ry="4" fill="${color}" transform="rotate(-25 67 63)"/>
-  `,
-  // Cat 🐱
-  (color: string) => `
-    <circle cx="50" cy="50" r="38" fill="${color}22" stroke="${color}" stroke-width="2"/>
-    <ellipse cx="50" cy="46" rx="20" ry="19" fill="${color}"/>
-    <polygon points="33,22 27,40 42,35" fill="${color}"/>
-    <polygon points="67,22 73,40 58,35" fill="${color}"/>
-    <ellipse cx="44" cy="41" rx="5" ry="6" fill="#1a1a2e"/>
-    <ellipse cx="56" cy="41" rx="5" ry="6" fill="#1a1a2e"/>
-    <ellipse cx="44" cy="41" rx="2" ry="5" fill="#f59e0b"/>
-    <ellipse cx="56" cy="41" rx="2" ry="5" fill="#f59e0b"/>
-    <circle cx="44" cy="41" r="1" fill="#1a1a2e"/>
-    <circle cx="56" cy="41" r="1" fill="#1a1a2e"/>
-    <ellipse cx="50" cy="50" rx="6" ry="4" fill="#fda4af"/>
-    <line x1="35" y1="48" x2="25" y2="45" stroke="${color}88" stroke-width="1.5"/>
-    <line x1="35" y1="50" x2="24" y2="50" stroke="${color}88" stroke-width="1.5"/>
-    <line x1="65" y1="48" x2="75" y2="45" stroke="${color}88" stroke-width="1.5"/>
-    <line x1="65" y1="50" x2="76" y2="50" stroke="${color}88" stroke-width="1.5"/>
-    <ellipse cx="50" cy="67" rx="9" ry="6" fill="${color}"/>
-    <ellipse cx="34" cy="62" rx="6" ry="4" fill="${color}" transform="rotate(20 34 62)"/>
-    <ellipse cx="66" cy="62" rx="6" ry="4" fill="${color}" transform="rotate(-20 66 62)"/>
-  `,
-  // Bear 🐻
-  (color: string) => `
-    <circle cx="50" cy="50" r="38" fill="${color}22" stroke="${color}" stroke-width="2"/>
-    <ellipse cx="50" cy="47" rx="24" ry="22" fill="${color}"/>
-    <circle cx="35" cy="27" r="10" fill="${color}"/>
-    <circle cx="65" cy="27" r="10" fill="${color}"/>
-    <circle cx="35" cy="27" r="6" fill="${color}cc"/>
-    <circle cx="65" cy="27" r="6" fill="${color}cc"/>
-    <circle cx="43" cy="42" r="5" fill="#1a1a2e"/>
-    <circle cx="57" cy="42" r="5" fill="#1a1a2e"/>
-    <circle cx="44" cy="41" r="2" fill="white"/>
-    <circle cx="58" cy="41" r="2" fill="white"/>
-    <ellipse cx="50" cy="53" rx="10" ry="8" fill="${color}bb"/>
-    <circle cx="50" cy="52" r="4" fill="#1a1a2e88"/>
-    <ellipse cx="50" cy="69" rx="14" ry="9" fill="${color}"/>
-    <ellipse cx="31" cy="63" rx="9" ry="6" fill="${color}" transform="rotate(15 31 63)"/>
-    <ellipse cx="69" cy="63" rx="9" ry="6" fill="${color}" transform="rotate(-15 69 63)"/>
-  `,
-  // Panda 🐼
-  (color: string) => `
-    <circle cx="50" cy="50" r="38" fill="white" stroke="#e2e8f0" stroke-width="2"/>
-    <ellipse cx="50" cy="46" rx="22" ry="21" fill="white"/>
-    <circle cx="36" cy="26" r="10" fill="#1a1a2e"/>
-    <circle cx="64" cy="26" r="10" fill="#1a1a2e"/>
-    <ellipse cx="41" cy="41" rx="7" ry="6" fill="#1a1a2e"/>
-    <ellipse cx="59" cy="41" rx="7" ry="6" fill="#1a1a2e"/>
-    <circle cx="43" cy="41" r="3" fill="white"/>
-    <circle cx="61" cy="41" r="3" fill="white"/>
-    <circle cx="43" cy="41" r="1.5" fill="#1a1a2e"/>
-    <circle cx="61" cy="41" r="1.5" fill="#1a1a2e"/>
-    <ellipse cx="50" cy="51" rx="7" ry="5" fill="#f8f8f8"/>
-    <circle cx="50" cy="52" r="3" fill="#1a1a2e55"/>
-    <ellipse cx="50" cy="68" rx="13" ry="8" fill="#1a1a2e"/>
-    <ellipse cx="32" cy="62" rx="8" ry="5" fill="#1a1a2e" transform="rotate(15 32 62)"/>
-    <ellipse cx="68" cy="62" rx="8" ry="5" fill="#1a1a2e" transform="rotate(-15 68 62)"/>
-  `,
-  // Lion 🦁
-  (color: string) => `
-    <circle cx="50" cy="50" r="38" fill="${color}22" stroke="${color}" stroke-width="2"/>
-    <circle cx="50" cy="46" r="26" fill="#d97706" opacity="0.4"/>
-    <circle cx="50" cy="46" r="22" fill="#d97706" opacity="0.3"/>
-    <ellipse cx="50" cy="46" rx="18" ry="17" fill="${color}"/>
-    <circle cx="43" cy="41" r="4.5" fill="#1a1a2e"/>
-    <circle cx="57" cy="41" r="4.5" fill="#1a1a2e"/>
-    <circle cx="44" cy="40" r="1.5" fill="white"/>
-    <circle cx="58" cy="40" r="1.5" fill="white"/>
-    <ellipse cx="50" cy="50" rx="9" ry="7" fill="${color}bb"/>
-    <circle cx="50" cy="50" r="4" fill="#1a1a2e55"/>
-    <line x1="36" y1="49" x2="25" y2="46" stroke="#92400e88" stroke-width="1.5"/>
-    <line x1="36" y1="51" x2="24" y2="51" stroke="#92400e88" stroke-width="1.5"/>
-    <line x1="64" y1="49" x2="75" y2="46" stroke="#92400e88" stroke-width="1.5"/>
-    <line x1="64" y1="51" x2="76" y2="51" stroke="#92400e88" stroke-width="1.5"/>
-    <ellipse cx="50" cy="67" rx="12" ry="8" fill="${color}"/>
-    <ellipse cx="33" cy="62" rx="8" ry="5" fill="${color}" transform="rotate(18 33 62)"/>
-    <ellipse cx="67" cy="62" rx="8" ry="5" fill="${color}" transform="rotate(-18 67 62)"/>
-  `,
-  // Tiger 🐯
-  (color: string) => `
-    <circle cx="50" cy="50" r="38" fill="${color}22" stroke="${color}" stroke-width="2"/>
-    <ellipse cx="50" cy="45" rx="22" ry="20" fill="${color}"/>
-    <ellipse cx="36" cy="27" rx="9" ry="12" fill="${color}" transform="rotate(-10 36 27)"/>
-    <ellipse cx="64" cy="27" rx="9" ry="12" fill="${color}" transform="rotate(10 64 27)"/>
-    <line x1="38" y1="35" x2="32" y2="30" stroke="#92400e" stroke-width="2"/>
-    <line x1="50" y1="33" x2="50" y2="26" stroke="#92400e" stroke-width="2"/>
-    <line x1="62" y1="35" x2="68" y2="30" stroke="#92400e" stroke-width="2"/>
-    <line x1="40" y1="55" x2="34" y2="52" stroke="#92400e" stroke-width="1.5"/>
-    <line x1="40" y1="58" x2="33" y2="58" stroke="#92400e" stroke-width="1.5"/>
-    <line x1="60" y1="55" x2="66" y2="52" stroke="#92400e" stroke-width="1.5"/>
-    <line x1="60" y1="58" x2="67" y2="58" stroke="#92400e" stroke-width="1.5"/>
-    <circle cx="43" cy="41" r="4.5" fill="#1a1a2e"/>
-    <circle cx="57" cy="41" r="4.5" fill="#1a1a2e"/>
-    <circle cx="44" cy="40" r="1.5" fill="white"/>
-    <circle cx="58" cy="40" r="1.5" fill="white"/>
-    <ellipse cx="50" cy="49" rx="8" ry="6" fill="#fef3c7"/>
-    <ellipse cx="50" cy="67" rx="11" ry="7" fill="${color}"/>
-    <ellipse cx="33" cy="62" rx="8" ry="5" fill="${color}" transform="rotate(20 33 62)"/>
-    <ellipse cx="67" cy="62" rx="8" ry="5" fill="${color}" transform="rotate(-20 67 62)"/>
-  `,
-  // Butterfly 🦋
-  (color: string) => `
-    <circle cx="50" cy="50" r="38" fill="${color}22" stroke="${color}" stroke-width="2"/>
-    <ellipse cx="50" cy="50" rx="4" ry="18" fill="#1a1a2e"/>
-    <ellipse cx="34" cy="38" rx="16" ry="12" fill="${color}" transform="rotate(-20 34 38)"/>
-    <ellipse cx="66" cy="38" rx="16" ry="12" fill="${color}" transform="rotate(20 66 38)"/>
-    <ellipse cx="32" cy="60" rx="13" ry="10" fill="${color}cc" transform="rotate(15 32 60)"/>
-    <ellipse cx="68" cy="60" rx="13" ry="10" fill="${color}cc" transform="rotate(-15 68 60)"/>
-    <ellipse cx="34" cy="38" rx="8" ry="6" fill="white" opacity="0.3" transform="rotate(-20 34 38)"/>
-    <ellipse cx="66" cy="38" rx="8" ry="6" fill="white" opacity="0.3" transform="rotate(20 66 38)"/>
-    <circle cx="50" cy="36" r="4" fill="#1a1a2e"/>
-    <line x1="50" y1="32" x2="45" y2="24" stroke="#1a1a2e" stroke-width="1.5"/>
-    <line x1="50" y1="32" x2="55" y2="24" stroke="#1a1a2e" stroke-width="1.5"/>
-  `,
-  // Frog 🐸
-  (color: string) => `
-    <circle cx="50" cy="50" r="38" fill="${color}22" stroke="${color}" stroke-width="2"/>
-    <ellipse cx="50" cy="52" rx="22" ry="20" fill="${color}"/>
-    <circle cx="36" cy="32" r="12" fill="${color}"/>
-    <circle cx="64" cy="32" r="12" fill="${color}"/>
-    <circle cx="36" cy="30" r="7" fill="white"/>
-    <circle cx="64" cy="30" r="7" fill="white"/>
-    <circle cx="36" cy="30" r="4" fill="#1a1a2e"/>
-    <circle cx="64" cy="30" r="4" fill="#1a1a2e"/>
-    <circle cx="37" cy="29" r="1.5" fill="white"/>
-    <circle cx="65" cy="29" r="1.5" fill="white"/>
-    <ellipse cx="50" cy="57" rx="14" ry="10" fill="${color}bb"/>
-    <path d="M 40 58 Q 50 65 60 58" stroke="#1a1a2e" stroke-width="2" fill="none"/>
-    <ellipse cx="28" cy="68" rx="10" ry="6" fill="${color}" transform="rotate(10 28 68)"/>
-    <ellipse cx="72" cy="68" rx="10" ry="6" fill="${color}" transform="rotate(-10 72 68)"/>
-  `,
-  // Koala 🐨
-  (color: string) => `
-    <circle cx="50" cy="50" r="38" fill="${color}22" stroke="${color}" stroke-width="2"/>
-    <ellipse cx="50" cy="47" rx="22" ry="20" fill="${color}"/>
-    <circle cx="30" cy="28" r="13" fill="${color}"/>
-    <circle cx="70" cy="28" r="13" fill="${color}"/>
-    <circle cx="30" cy="28" r="8" fill="${color}88"/>
-    <circle cx="70" cy="28" r="8" fill="${color}88"/>
-    <ellipse cx="50" cy="52" rx="14" ry="12" fill="${color}cc"/>
-    <ellipse cx="50" cy="53" rx="9" ry="7" fill="#a3a3a3"/>
-    <circle cx="43" cy="42" r="4.5" fill="#1a1a2e"/>
-    <circle cx="57" cy="42" r="4.5" fill="#1a1a2e"/>
-    <circle cx="44" cy="41" r="1.5" fill="white"/>
-    <circle cx="58" cy="41" r="1.5" fill="white"/>
-    <ellipse cx="50" cy="68" rx="13" ry="8" fill="${color}"/>
-    <ellipse cx="32" cy="63" rx="8" ry="5" fill="${color}" transform="rotate(15 32 63)"/>
-    <ellipse cx="68" cy="63" rx="8" ry="5" fill="${color}" transform="rotate(-15 68 63)"/>
-  `,
-  // Eagle 🦅
-  (color: string) => `
-    <circle cx="50" cy="50" r="38" fill="${color}22" stroke="${color}" stroke-width="2"/>
-    <ellipse cx="50" cy="48" rx="16" ry="14" fill="#92400e"/>
-    <ellipse cx="50" cy="38" rx="10" ry="9" fill="white"/>
-    <circle cx="44" cy="36" r="4" fill="#1a1a2e"/>
-    <circle cx="56" cy="36" r="4" fill="#1a1a2e"/>
-    <circle cx="45" cy="35" r="1.5" fill="white"/>
-    <circle cx="57" cy="35" r="1.5" fill="white"/>
-    <polygon points="50,43 46,47 54,47" fill="#f59e0b"/>
-    <ellipse cx="22" cy="52" rx="20" ry="8" fill="${color}" transform="rotate(-15 22 52)"/>
-    <ellipse cx="78" cy="52" rx="20" ry="8" fill="${color}" transform="rotate(15 78 52)"/>
-    <ellipse cx="50" cy="66" rx="10" ry="6" fill="#92400e"/>
-    <polygon points="44,72 50,80 56,72" fill="#f59e0b"/>
-  `,
-  // Dolphin 🐬
-  (color: string) => `
-    <circle cx="50" cy="50" r="38" fill="${color}22" stroke="${color}" stroke-width="2"/>
-    <ellipse cx="50" cy="50" rx="26" ry="16" fill="${color}"/>
-    <ellipse cx="50" cy="44" rx="10" ry="8" fill="${color}dd"/>
-    <ellipse cx="72" cy="50" rx="10" ry="6" fill="${color}"/>
-    <ellipse cx="30" cy="50" rx="6" ry="4" fill="${color}dd"/>
-    <circle cx="43" cy="43" r="3.5" fill="#1a1a2e"/>
-    <circle cx="44" cy="42" r="1" fill="white"/>
-    <ellipse cx="50" cy="58" rx="18" ry="6" fill="${color}cc"/>
-    <ellipse cx="38" cy="65" rx="10" ry="5" fill="${color}" transform="rotate(-20 38 65)"/>
-    <ellipse cx="62" cy="65" rx="10" ry="5" fill="${color}" transform="rotate(20 62 65)"/>
-    <ellipse cx="50" cy="48" rx="16" ry="6" fill="white" opacity="0.25"/>
-  `,
+interface AvatarDesign {
+  name: string
+  skin: string
+  hair: string
+  hairStyle: string
+  accessory: string
+  shirtColor: string
+  pantColor: string
+}
+
+const AVATAR_DESIGNS: AvatarDesign[] = [
+  { name:"Cool",    skin:"#FDBCB4", hair:"#3D2314", hairStyle:"cool",    accessory:"sunglasses", shirtColor:"#6366f1", pantColor:"#1e1e2e" },
+  { name:"Fête",    skin:"#F5CBA7", hair:"#E91E63", hairStyle:"long",    accessory:"none",       shirtColor:"#ec4899", pantColor:"#7c3aed" },
+  { name:"Nerd",    skin:"#FDBCB4", hair:"#4A3728", hairStyle:"side",    accessory:"glasses",    shirtColor:"#22c55e", pantColor:"#1e40af" },
+  { name:"Gros",    skin:"#C68642", hair:"#1a1a1a", hairStyle:"short",   accessory:"none",       shirtColor:"#ef4444", pantColor:"#374151" },
+  { name:"Chic",    skin:"#F1C27D", hair:"#B5651D", hairStyle:"bun",     accessory:"none",       shirtColor:"#f59e0b", pantColor:"#78350f" },
+  { name:"Punk",    skin:"#FDBCB4", hair:"#a855f7", hairStyle:"mohawk",  accessory:"none",       shirtColor:"#1a1a2e", pantColor:"#1a1a2e" },
+  { name:"Sport",   skin:"#8D5524", hair:"#1a1a1a", hairStyle:"short",   accessory:"none",       shirtColor:"#38bdf8", pantColor:"#0c4a6e" },
+  { name:"Mystère", skin:"#F5CBA7", hair:"#1a1a1a", hairStyle:"long",    accessory:"none",       shirtColor:"#0f0f1a", pantColor:"#3b1f6a" },
+  { name:"Rockeur", skin:"#FDBCB4", hair:"#1a1a1a", hairStyle:"cool",    accessory:"none",       shirtColor:"#1a1a1a", pantColor:"#1a1a1a" },
+  { name:"Soleil",  skin:"#F5CBA7", hair:"#f59e0b", hairStyle:"bun",     accessory:"none",       shirtColor:"#fbbf24", pantColor:"#92400e" },
+  { name:"Ninja",   skin:"#C68642", hair:"#1a1a1a", hairStyle:"short",   accessory:"none",       shirtColor:"#0f0f1a", pantColor:"#0f0f1a" },
+  { name:"DJ",      skin:"#8D5524", hair:"#a855f7", hairStyle:"mohawk",  accessory:"sunglasses", shirtColor:"#ec4899", pantColor:"#1a1a2e" },
 ]
 
 export const AVATAR_COUNT = AVATAR_DESIGNS.length
 
-interface DrunkAvatarProps {
-  avatarIndex: number
-  color: string
-  bac: number
-  size?: number
-  isMe?: boolean
+function lighten(hex: string, amount: number): string {
+  const num = parseInt(hex.replace('#',''), 16)
+  const r = Math.min(255, Math.max(0, (num >> 16) + amount))
+  const g = Math.min(255, Math.max(0, ((num >> 8) & 0xff) + amount))
+  const b = Math.min(255, Math.max(0, (num & 0xff) + amount))
+  return '#' + ((r<<16)|(g<<8)|b).toString(16).padStart(6,'0')
 }
 
-export default function DrunkAvatar({ avatarIndex, color, bac, size = 60, isMe = false }: DrunkAvatarProps) {
-  const svgRef = useRef<SVGSVGElement>(null)
+interface Props {
+  avatarIndex: number
+  bac: number
+  size?: number
+  animate?: boolean
+  isMe?: boolean
+  color?: string
+}
+
+export default function DrunkAvatar({ avatarIndex, bac, size = 80, animate = true, isMe = false, color }: Props) {
+  const containerRef = useRef<HTMLDivElement>(null)
   const frameRef = useRef<number>(0)
-  const timeRef = useRef(0)
 
   useEffect(() => {
-    if (!svgRef.current) return
-    const svg = svgRef.current
-
-    const animate = (ts: number) => {
-      timeRef.current = ts
-      if (!svgRef.current) return
-
+    if (!animate || !containerRef.current) return
+    const el = containerRef.current
+    const frame = (ts: number) => {
+      if (!el) return
       if (bac < 0.2) {
-        // Sober: subtle breathing
-        const s = 1 + Math.sin(ts / 1200) * 0.02
-        svg.style.transform = `scale(${s})`
+        el.style.transform = `translateY(${Math.sin(ts/900)*2}px)`
       } else if (bac < 0.5) {
-        // Slightly drunk: slow sway
-        const r = Math.sin(ts / 800) * 5
-        svg.style.transform = `rotate(${r}deg)`
+        el.style.transform = `rotate(${Math.sin(ts/700)*7}deg)`
       } else if (bac < 0.8) {
-        // Drunk: sway + slight wobble
-        const r = Math.sin(ts / 600) * 10 + Math.sin(ts / 250) * 3
-        const tx = Math.sin(ts / 700) * 3
-        svg.style.transform = `rotate(${r}deg) translateX(${tx}px)`
+        const r = Math.sin(ts/450)*14 + Math.sin(ts/180)*4
+        el.style.transform = `rotate(${r}deg) translateX(${Math.sin(ts/550)*5}px)`
       } else if (bac < 1.2) {
-        // Very drunk: erratic movement
-        const r = Math.sin(ts / 400) * 18 + Math.sin(ts / 150) * 6
-        const tx = Math.sin(ts / 300) * 6
-        const ty = Math.cos(ts / 350) * 4
-        svg.style.transform = `rotate(${r}deg) translate(${tx}px, ${ty}px)`
+        const r = Math.sin(ts/300)*22 + Math.sin(ts/120)*8
+        el.style.transform = `rotate(${r}deg) translate(${Math.sin(ts/280)*10}px,${Math.abs(Math.sin(ts/240))*7}px)`
       } else if (bac < 1.8) {
-        // Wasted: chaotic spinning + stumbling
-        const r = Math.sin(ts / 250) * 28 + Math.sin(ts / 90) * 10
-        const tx = Math.sin(ts / 200) * 10
-        const ty = Math.cos(ts / 180) * 8
-        const s = 1 + Math.sin(ts / 300) * 0.08
-        svg.style.transform = `rotate(${r}deg) translate(${tx}px, ${ty}px) scale(${s})`
+        const r = Math.sin(ts/200)*30 + Math.sin(ts/80)*12
+        const s = 1 + Math.sin(ts/280)*0.1
+        el.style.transform = `rotate(${r}deg) translate(${Math.sin(ts/170)*14}px,${Math.abs(Math.sin(ts/150))*10}px) scale(${s})`
       } else {
-        // In the pipes: almost spinning, collapsing
-        const r = (ts / 8) % 360
-        const s = 0.85 + Math.sin(ts / 200) * 0.15
-        svg.style.transform = `rotate(${r}deg) scale(${s})`
-        svg.style.opacity = String(0.6 + Math.sin(ts / 400) * 0.4)
+        el.style.transform = `rotate(${(ts/7)%360}deg) scale(${0.8+Math.sin(ts/320)*0.2})`
+        el.style.opacity = String(0.5 + Math.sin(ts/550)*0.5)
       }
-
-      frameRef.current = requestAnimationFrame(animate)
+      frameRef.current = requestAnimationFrame(frame)
     }
-
-    frameRef.current = requestAnimationFrame(animate)
+    frameRef.current = requestAnimationFrame(frame)
     return () => cancelAnimationFrame(frameRef.current)
-  }, [bac])
+  }, [bac, animate])
 
-  const idx = Math.abs(avatarIndex) % AVATAR_DESIGNS.length
-  const svgContent = AVATAR_DESIGNS[idx](color)
-
-  // Drunk overlay effects
-  const showStars = bac >= 1.2
-  const showZzz = bac >= 1.8
+  const idx = Math.abs(Math.round(avatarIndex)) % AVATAR_DESIGNS.length
+  const d = AVATAR_DESIGNS[idx]
+  const eyeOpen = bac < 1.5 ? 1 : Math.max(0.15, 1-(bac-1.5)*0.9)
+  const cheekOp = Math.min(0.6, bac*1.2)
+  const mouthD = bac < 0.3 ? "M30,70 Q40,76 50,70" : bac < 1.5 ? "M30,68 Q40,80 50,68" : "M30,73 Q40,66 50,73"
+  const sweat = bac > 0.8
+  const sc = size/130
 
   return (
-    <div style={{
-      position: "relative",
-      width: size,
-      height: size,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-    }}>
-      {/* Glow for current user */}
+    <div style={{ position:"relative", display:"inline-flex", alignItems:"center", justifyContent:"center" }}>
       {isMe && (
-        <div style={{
-          position: "absolute", inset: -4,
-          borderRadius: "50%",
-          background: `radial-gradient(circle, ${color}40, transparent 70%)`,
-          animation: "pulse 2s infinite",
-        }}/>
+        <div style={{ position:"absolute", inset:-4, borderRadius:"50%", background:`radial-gradient(circle, ${color||"#a855f7"}50, transparent 70%)`, pointerEvents:"none" }}/>
       )}
-      <svg
-        ref={svgRef}
-        width={size}
-        height={size}
-        viewBox="0 0 100 100"
-        style={{
-          transformOrigin: "center",
-          transition: "opacity 0.3s",
-          willChange: "transform",
-        }}
-        dangerouslySetInnerHTML={{ __html: svgContent }}
-      />
-      {/* Star effects when very drunk */}
-      {showStars && (
-        <div style={{ position:"absolute", top:-8, right:-8, fontSize:12, animation:"spin 1s linear infinite" }}>⭐</div>
-      )}
-      {showZzz && (
-        <div style={{ position:"absolute", top:-12, left:-4, fontSize:10, animation:"float 1.5s ease-in-out infinite" }}>💤</div>
-      )}
-      <style>{`
-        @keyframes pulse { 0%,100%{opacity:.6} 50%{opacity:1} }
-        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
-      `}</style>
+      <div ref={containerRef} style={{ transformOrigin:"center 85%", willChange:"transform" }}>
+        <svg width={size} height={size*1.15} viewBox="0 0 100 120" overflow="visible">
+          <defs>
+            <radialGradient id={`sk${idx}`} cx="45%" cy="35%" r="65%">
+              <stop offset="0%" stopColor={lighten(d.skin,25)}/>
+              <stop offset="100%" stopColor={d.skin}/>
+            </radialGradient>
+            <radialGradient id={`ey${idx}`} cx="30%" cy="30%" r="70%">
+              <stop offset="0%" stopColor="#6ab0ff"/>
+              <stop offset="100%" stopColor="#1a4aaa"/>
+            </radialGradient>
+          </defs>
+
+          {/* Shadow */}
+          <ellipse cx="50" cy="118" rx="22" ry="4" fill="rgba(0,0,0,0.25)"/>
+
+          {/* Legs */}
+          <rect x="33" y="88" width="13" height="24" rx="6" fill={d.pantColor}/>
+          <rect x="54" y="88" width="13" height="24" rx="6" fill={d.pantColor}/>
+          <ellipse cx="39" cy="113" rx="9" ry="4" fill="#111"/>
+          <ellipse cx="61" cy="113" rx="9" ry="4" fill="#111"/>
+
+          {/* Body */}
+          <rect x="25" y="62" width="50" height="32" rx="13" fill={d.shirtColor}/>
+          <polygon points="43,62 50,74 57,62" fill="white" opacity="0.7"/>
+          {/* Arms */}
+          <ellipse cx="17" cy="76" rx="9" ry="7" fill={d.shirtColor} transform="rotate(18 17 76)"/>
+          <ellipse cx="83" cy="76" rx="9" ry="7" fill={d.shirtColor} transform="rotate(-18 83 76)"/>
+          <circle cx="11" cy="84" r="6" fill={`url(#sk${idx})`}/>
+          <circle cx="89" cy="84" r="6" fill={`url(#sk${idx})`}/>
+
+          {/* Neck */}
+          <rect x="43" y="52" width="14" height="13" rx="5" fill={`url(#sk${idx})`}/>
+
+          {/* Head */}
+          <ellipse cx="50" cy="34" rx="30" ry="32" fill={`url(#sk${idx})`}/>
+          <ellipse cx="20" cy="36" rx="7" ry="9" fill={d.skin}/>
+          <ellipse cx="80" cy="36" rx="7" ry="9" fill={d.skin}/>
+          <ellipse cx="20" cy="36" rx="4.5" ry="6" fill={lighten(d.skin,-12)}/>
+          <ellipse cx="80" cy="36" rx="4.5" ry="6" fill={lighten(d.skin,-12)}/>
+
+          {/* Hair */}
+          {d.hairStyle==="cool" && <>
+            <ellipse cx="50" cy="9" rx="28" ry="12" fill={d.hair}/>
+            <ellipse cx="50" cy="13" rx="30" ry="11" fill={d.hair}/>
+            <ellipse cx="22" cy="24" rx="9" ry="16" fill={d.hair}/>
+            <ellipse cx="78" cy="24" rx="9" ry="16" fill={d.hair}/>
+          </>}
+          {d.hairStyle==="short" && <>
+            <ellipse cx="50" cy="10" rx="28" ry="11" fill={d.hair}/>
+            <rect x="21" y="11" width="58" height="13" fill={d.hair}/>
+          </>}
+          {d.hairStyle==="long" && <>
+            <ellipse cx="50" cy="8" rx="30" ry="13" fill={d.hair}/>
+            <rect x="19" y="12" width="11" height="42" rx="5" fill={d.hair}/>
+            <rect x="70" y="12" width="11" height="42" rx="5" fill={d.hair}/>
+          </>}
+          {d.hairStyle==="bun" && <>
+            <ellipse cx="50" cy="10" rx="27" ry="11" fill={d.hair}/>
+            <circle cx="50" cy="4" r="9" fill={d.hair}/>
+          </>}
+          {d.hairStyle==="side" && <>
+            <ellipse cx="50" cy="10" rx="28" ry="11" fill={d.hair}/>
+            <rect x="21" y="11" width="53" height="13" fill={d.hair}/>
+            <ellipse cx="25" cy="22" rx="7" ry="11" fill={d.hair}/>
+          </>}
+          {d.hairStyle==="mohawk" && <>
+            <rect x="43" y="0" width="14" height="26" rx="7" fill={d.hair}/>
+            <rect x="19" y="12" width="13" height="7" rx="3" fill={d.hair}/>
+            <rect x="68" y="12" width="13" height="7" rx="3" fill={d.hair}/>
+          </>}
+
+          {/* Eyes */}
+          <g transform={`scale(1,${eyeOpen}) translate(0,${(1-eyeOpen)*32})`}>
+            <circle cx="36" cy="32" r="8" fill="white"/>
+            <circle cx="36" cy="32" r="5.5" fill={`url(#ey${idx})`}/>
+            <circle cx="36" cy="32" r="3" fill="#060612"/>
+            <circle cx="37.5" cy="30.5" r="1.3" fill="white"/>
+            <circle cx="64" cy="32" r="8" fill="white"/>
+            <circle cx="64" cy="32" r="5.5" fill={`url(#ey${idx})`}/>
+            <circle cx="64" cy="32" r="3" fill="#060612"/>
+            <circle cx="65.5" cy="30.5" r="1.3" fill="white"/>
+          </g>
+          {/* Eyelids drunk */}
+          {bac>0.8 && <ellipse cx="36" cy="29" rx="8" ry={3.5*(bac-0.8)} fill={d.skin}/>}
+          {bac>0.8 && <ellipse cx="64" cy="29" rx="8" ry={3.5*(bac-0.8)} fill={d.skin}/>}
+
+          {/* Brows */}
+          <path d={bac<0.8?"M28,22 Q36,18 44,22":"M28,25 Q36,21 44,25"} stroke={d.hair} strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+          <path d={bac<0.8?"M56,22 Q64,18 72,22":"M56,25 Q64,21 72,25"} stroke={d.hair} strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+
+          {/* Nose */}
+          <ellipse cx="50" cy="43" rx="4.5" ry="3.5" fill={lighten(d.skin,-14)}/>
+
+          {/* Cheeks */}
+          {cheekOp>0.05 && <>
+            <ellipse cx="24" cy="44" rx="8" ry="5.5" fill="#ff6b9d" opacity={cheekOp}/>
+            <ellipse cx="76" cy="44" rx="8" ry="5.5" fill="#ff6b9d" opacity={cheekOp}/>
+          </>}
+
+          {/* Mouth */}
+          <path d={mouthD} stroke="#c0392b" strokeWidth="2" fill={bac>0.5?"#ff8888":"none"} strokeLinecap="round"/>
+
+          {/* Accessories */}
+          {d.accessory==="sunglasses" && <>
+            <rect x="27" y="27" width="17" height="11" rx="5.5" fill="#1a1a1a" opacity="0.92"/>
+            <rect x="56" y="27" width="17" height="11" rx="5.5" fill="#1a1a1a" opacity="0.92"/>
+            <line x1="44" y1="32" x2="56" y2="32" stroke="#1a1a1a" strokeWidth="2"/>
+            <rect x="28" y="28" width="15" height="9" rx="4.5" fill="#6366f1" opacity="0.65"/>
+            <rect x="57" y="28" width="15" height="9" rx="4.5" fill="#6366f1" opacity="0.65"/>
+          </>}
+          {d.accessory==="glasses" && <>
+            <circle cx="36" cy="32" r="9" fill="none" stroke="#92400e" strokeWidth="2"/>
+            <circle cx="64" cy="32" r="9" fill="none" stroke="#92400e" strokeWidth="2"/>
+            <line x1="45" y1="32" x2="55" y2="32" stroke="#92400e" strokeWidth="2"/>
+            <line x1="19" y1="32" x2="27" y2="32" stroke="#92400e" strokeWidth="2"/>
+            <line x1="73" y1="32" x2="81" y2="32" stroke="#92400e" strokeWidth="2"/>
+          </>}
+
+          {/* Sweat */}
+          {sweat && <ellipse cx="76" cy="18" rx="2.5" ry="5" fill="#60a5fa" opacity="0.8"/>}
+
+          {/* Stars */}
+          {bac>1.2 && <>
+            <text x="4" y="14" fontSize="11">⭐</text>
+            <text x="76" y="14" fontSize="9">✨</text>
+          </>}
+          {/* Zzz */}
+          {bac>1.8 && <>
+            <text x="70" y="10" fontSize="7" fill="#60a5fa">z</text>
+            <text x="76" y="4" fontSize="9" fill="#60a5fa" opacity="0.8">z</text>
+            <text x="82" y="-2" fontSize="11" fill="#60a5fa" opacity="0.6">Z</text>
+          </>}
+        </svg>
+      </div>
     </div>
   )
 }
