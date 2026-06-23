@@ -7,6 +7,7 @@ import DrunkAvatar, { type AvatarConfig, DEFAULT_AVATAR } from "./DrunkAvatar"
 import DrinkTab from "./DrinkTab"
 import PhotoTab from "./PhotoTab"
 import AvatarEditor from "./AvatarEditor"
+import GlobalProfile from "./GlobalProfile"
 import DuelGame from "./DuelGame"
 import RPSGame from "./RPSGame"
 
@@ -416,7 +417,7 @@ function StatsTab({ myMember, members, samMember, events }: any) {
 }
 
 // ── PROFILE TAB ───────────────────────────────────────────────────────────────
-function ProfileTab({ myMember, user, group, onUpdate }: any) {
+function ProfileTab({ myMember, user, group, onUpdate, onShowGlobal }: any) {
   const [pseudo, setPseudo] = useState(myMember.pseudo)
   const [weight, setWeight] = useState(String(myMember.weight_kg))
   const [sex, setSex]       = useState(myMember.sex)
@@ -424,7 +425,9 @@ function ProfileTab({ myMember, user, group, onUpdate }: any) {
   const [saved, setSaved]   = useState(false)
   const [copied, setCopied] = useState(false)
   const [editAvatar, setEditAvatar] = useState(false)
+  const [showGlobal, setShowGlobal] = useState(false)
   const supabase = createClient()
+  useEffect(() => { if(showGlobal) onShowGlobal() }, [showGlobal])
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://drunkrace.vercel.app"
 
   const save = async () => {
@@ -485,6 +488,9 @@ function ProfileTab({ myMember, user, group, onUpdate }: any) {
       <button onClick={save} style={{width:"100%",padding:"13px",borderRadius:13,border:"none",cursor:"pointer",background:"linear-gradient(135deg,#a855f7,#ec4899)",color:"#fff",fontSize:14,fontWeight:700,marginBottom:10}}>
         {saved?"✅ Sauvegardé !":"Sauvegarder"}
       </button>
+      <button onClick={()=>setShowGlobal(true)} style={{width:"100%",padding:"12px",borderRadius:13,border:"1px solid #3b1f6a",cursor:"pointer",background:"#13131f",color:"#c084fc",fontSize:14,fontWeight:700,marginBottom:10}}>
+        🌍 Voir mon profil global
+      </button>
       <button onClick={()=>supabase.auth.signOut()} style={{width:"100%",padding:"12px",borderRadius:13,border:"1px solid #2a2a3e",cursor:"pointer",background:"#1e1e2e",color:"#6b7280",fontSize:14,marginBottom:10}}>
         Se déconnecter
       </button>
@@ -519,6 +525,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
   const [showRedFlag, setShowRedFlag] = useState(false)
   const [showDuel, setShowDuel]       = useState(false)
   const [showRPS, setShowRPS]         = useState(false)
+  const [showGlobalProfile, setShowGlobalProfile] = useState(false)
   const [incomingRPS, setIncomingRPS] = useState<any>(null)
   const [ended, setEnded]       = useState(group.status==="finished")
   const supabase = createClient()
@@ -664,7 +671,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
       {tab==="drink"   && <DrinkTab myMember={myMember} samMember={samMember} onAddDrink={handleAddDrink} onUndo={handleUndo}/>}
       {tab==="stats"   && <StatsTab myMember={myMember} members={members} samMember={samMember} events={events}/>}
       {tab==="photo"   && <PhotoTab groupId={group.id} userId={user.id}/>}
-      {tab==="profile" && <ProfileTab myMember={myMember} user={user} group={group} onUpdate={(p:any)=>{setMembers(prev=>prev.map(m=>m.isMe?{...m,...p}:m));onProfileUpdate()}}/>}
+      {tab==="profile" && <ProfileTab myMember={myMember} user={user} group={group} onUpdate={(p:any)=>{setMembers(prev=>prev.map(m=>m.isMe?{...m,...p}:m));onProfileUpdate()}} onShowGlobal={()=>setShowGlobalProfile(true)}/>}
       <TabBar active={tab} onChange={setTab}/>
       {/* Incoming invite banner */}
       {incomingRPS && !showRPS && (
@@ -683,6 +690,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
       {showWheel&&<SamWheel members={members} onSamChosen={handleSamChosen} onClose={()=>setShowWheel(false)}/>}
       {showRedFlag&&<RedFlagModal members={members} myId={user.id} groupId={group.id} onClose={()=>{setShowRedFlag(false);loadEvents()}}/>}
       {showDuel&&<DuelGame members={members} onAwardDistance={handleAwardDistance} onClose={()=>setShowDuel(false)}/>}
+      {showGlobalProfile&&<GlobalProfile user={user} profile={profile} onClose={()=>setShowGlobalProfile(false)}/>}
       {showRPS&&<RPSGame members={members} myUserId={user.id} groupId={group.id} onAwardDistance={handleAwardSimple} onClose={()=>setShowRPS(false)}/>}
       {incomingRPS&&<RPSGame members={members} myUserId={user.id} groupId={group.id} invite={incomingRPS} onAwardDistance={handleAwardSimple} onClose={()=>setIncomingRPS(null)}/>}
     </div>
