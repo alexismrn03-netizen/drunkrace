@@ -11,6 +11,7 @@ import GlobalProfile from "./GlobalProfile"
 import DuelGame from "./DuelGame"
 import RPSGame from "./RPSGame"
 import DiceGame from "./DiceGame"
+import WheelGame from "./WheelGame"
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 function memberDist(drinks: DrinkEntry[]) {
@@ -181,7 +182,7 @@ function RedFlagModal({ members, myId, groupId, onClose }: any) {
 }
 
 // ── RACE TRACK ───────────────────────────────────────────────────────────────
-function RaceTrack({ members, samMember, isCreator, group, events, onShowWheel, onRemoveSam, onEndRace, onRedFlag, onDuel, onRPS, onDice, myId }: any) {
+function RaceTrack({ members, samMember, isCreator, group, events, onShowWheel, onRemoveSam, onEndRace, onRedFlag, onDuel, onRPS, onDice, onWheel, myId }: any) {
   const drinkers = members.filter((m:any)=>m.user_id!==samMember?.user_id)
   const maxDist  = Math.max(...drinkers.map((m:any)=>memberDist(m.drinks)),10)
   const sorted   = [...drinkers].sort((a:any,b:any)=>memberDist(b.drinks)-memberDist(a.drinks))
@@ -244,6 +245,9 @@ function RaceTrack({ members, samMember, isCreator, group, events, onShowWheel, 
         </button>
         <button onClick={onDice} style={{flex:1,padding:"10px",borderRadius:12,border:"1px solid #78350f",background:"#1a0a00",cursor:"pointer",color:"#fbbf24",fontSize:12,fontWeight:700}}>
           🎲 Dé
+        </button>
+        <button onClick={onWheel} style={{flex:1,padding:"10px",borderRadius:12,border:"1px solid #4c1d95",background:"#1a0a2e",cursor:"pointer",color:"#c084fc",fontSize:12,fontWeight:700}}>
+          🎰 Roue
         </button>
       </div>
 
@@ -530,6 +534,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
   const [showDuel, setShowDuel]       = useState(false)
   const [showRPS, setShowRPS]         = useState(false)
   const [showDice, setShowDice]       = useState(false)
+  const [showChallengeWheel, setShowChallengeWheel] = useState(false)
   const [showGlobalProfile, setShowGlobalProfile] = useState(false)
   const [incomingRPS, setIncomingRPS] = useState<any>(null)
   const [incomingDice, setIncomingDice] = useState<any>(null)
@@ -688,7 +693,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
 
   return (
     <div style={{background:"#0a0a14",minHeight:"100vh",maxWidth:480,margin:"0 auto",position:"relative"}}>
-      {tab==="race"    && <RaceTrack members={members} samMember={samMember} isCreator={isCreator} group={group} events={events} onShowWheel={()=>setShowWheel(true)} onRemoveSam={handleRemoveSam} onEndRace={handleEndRace} onRedFlag={()=>setShowRedFlag(true)} onDuel={()=>setShowDuel(true)} onRPS={()=>setShowRPS(true)} onDice={()=>setShowDice(true)} myId={user.id}/>}
+      {tab==="race"    && <RaceTrack members={members} samMember={samMember} isCreator={isCreator} group={group} events={events} onShowWheel={()=>setShowWheel(true)} onRemoveSam={handleRemoveSam} onEndRace={handleEndRace} onRedFlag={()=>setShowRedFlag(true)} onDuel={()=>setShowDuel(true)} onRPS={()=>setShowRPS(true)} onDice={()=>setShowDice(true)} onWheel={()=>setShowChallengeWheel(true)} myId={user.id}/>}
       {tab==="drink"   && <DrinkTab myMember={myMember} samMember={samMember} onAddDrink={handleAddDrink} onUndo={handleUndo}/>}
       {tab==="stats"   && <StatsTab myMember={myMember} members={members} samMember={samMember} events={events}/>}
       {tab==="photo"   && <PhotoTab groupId={group.id} userId={user.id}/>}
@@ -726,7 +731,8 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
       {showDuel&&<DuelGame members={members} onAwardDistance={handleAwardDistance} onClose={()=>setShowDuel(false)}/>}
       {showGlobalProfile&&<GlobalProfile user={user} profile={profile} onClose={()=>setShowGlobalProfile(false)}/>}
       {showRPS&&<RPSGame members={members} myUserId={user.id} groupId={group.id} onAwardDistance={handleAwardSimple} onClose={()=>setShowRPS(false)}/>}
-      {showDice&&<DiceGame members={members} myUserId={user.id} groupId={group.id} invite={incomingDice} onAwardDistance={handleAwardSimple} onClose={()=>{setShowDice(false);setIncomingDice(null)}}/>}
+      {showDice&&<DiceGame members={members} myUserId={user.id} groupId={group.id} invite={incomingDice} onAwardDistance={handleAwardSimple} onClose={()=>{setShowDice(false);setIncomingDice(null)}}/> }
+      {showChallengeWheel&&<WheelGame members={members} myUserId={user.id} onAwardDistance={handleAwardSimple} onClose={()=>setShowChallengeWheel(false)}/>}
       {incomingRPS&&<RPSGame members={members} myUserId={user.id} groupId={group.id} invite={incomingRPS} onAwardDistance={handleAwardSimple} onClose={()=>setIncomingRPS(null)}/>}
     </div>
   )
