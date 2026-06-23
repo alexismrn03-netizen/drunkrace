@@ -196,6 +196,7 @@ export default function WheelGame({ members, myUserId, onAwardDistance, onClose 
         tickRef.current = new ((window as any).AudioContext || (window as any).webkitAudioContext)()
       }
       const ctx = tickRef.current
+      if (!ctx) return
       if (ctx.state === "suspended") ctx.resume()
       const o = ctx.createOscillator()
       const g = ctx.createGain()
