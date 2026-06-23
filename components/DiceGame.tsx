@@ -258,8 +258,16 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
   }, [inviteId, mode])
 
   const computeResult = (rolls: Record<string,number|null>, playerIds: string[]) => {
-    const vals = playerIds.map(id => ({ id, val: rolls[id] ?? 99 }))
+    // Merge with pendingValues to avoid race conditions
+    const vals = playerIds.map(id => ({
+      id,
+      val: rolls[id] ?? pendingValue[id] ?? 99
+    }))
     const minVal = Math.min(...vals.map(v => v.val))
+    // Sync playerRolls with the actual computed values
+    const syncedRolls: Record<string,number> = {}
+    vals.forEach(v => { if (v.val !== 99) syncedRolls[v.id] = v.val })
+    setPlayerRolls(prev => ({ ...prev, ...syncedRolls }))
     setLosers(vals.filter(v => v.val === minVal).map(v => v.id))
     setPhase("result")
   }
@@ -305,19 +313,28 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
 
   const rollRemote = async () => {
     if (isRolling || playerRolls[myUserId] != null) return
+    // Generate val ONCE and use it everywhere
     const val = trueRandom()
     playDiceSound()
     setIsRolling(true)
+    // Set pendingValue immediately so die snaps to this face during deceleration
     setPendingValue(prev => ({ ...prev, [myUserId]: val }))
+    // Wait for roll animation
     await new Promise(r => setTimeout(r, 2300))
     setIsRolling(false)
+    // Show face for 1.5s before revealing score
     await new Promise(r => setTimeout(r, 1500))
+    // Now update DB and local state with the SAME val
     const { data: current } = await supabase.from("game_invites").select("game_data").eq("id", inviteId).single()
     const currentRolls = current?.game_data?.rolls || {}
     const newRolls = { ...currentRolls, [myUserId]: val }
     const playerIds: string[] = current?.game_data?.player_ids || selected
+    // Update local display (same val as pendingValue)
     setPlayerRolls(prev => ({ ...prev, [myUserId]: val }))
-    await supabase.from("game_invites").update({ game_data:{ ...current?.game_data, rolls:newRolls } }).eq("id", inviteId)
+    // Update DB
+    await supabase.from("game_invites").update({
+      game_data: { ...current?.game_data, rolls: newRolls }
+    }).eq("id", inviteId)
     if (playerIds.every(id => newRolls[id] != null)) computeResult(newRolls, playerIds)
   }
 
