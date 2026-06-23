@@ -229,7 +229,8 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
   const [playerRolls, setPlayerRolls] = useState<Record<string,number|null>>({})
   const [localTurn, setLocalTurn] = useState(0)
   const [isRolling, setIsRolling] = useState(false)
-  const [pendingValue, setPendingValue] = useState<Record<string,number>>({})
+  const myValRef = useRef<number>(1) // locked value from the moment dice is thrown
+  const [dieDisplayValue, setDieDisplayValue] = useState(1) // what the die shows visually
   const [phase, setPhase] = useState<Phase>(invite ? "rolling" : "setup")
   const [losers, setLosers] = useState<string[]>([])
   const [tieRound, setTieRound] = useState(false)
@@ -258,13 +259,17 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
   }, [inviteId, mode])
 
   const computeResult = (rolls: Record<string,number|null>, playerIds: string[]) => {
-    // Merge with pendingValues to avoid race conditions
+    // Always use myValRef for our own value — it's the source of truth
+    const resolvedRolls = { ...rolls }
+    if (myValRef.current && !resolvedRolls[myUserId]) {
+      resolvedRolls[myUserId] = myValRef.current
+    }
     const vals = playerIds.map(id => ({
       id,
-      val: rolls[id] ?? pendingValue[id] ?? 99
+      val: resolvedRolls[id] ?? 99
     }))
     const minVal = Math.min(...vals.map(v => v.val))
-    // Sync playerRolls with the actual computed values
+    // Sync display with resolved values
     const syncedRolls: Record<string,number> = {}
     vals.forEach(v => { if (v.val !== 99) syncedRolls[v.id] = v.val })
     setPlayerRolls(prev => ({ ...prev, ...syncedRolls }))
@@ -293,17 +298,21 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
 
   const rollLocal = async (userId: string) => {
     if (isRolling || playerRolls[userId] != null) return
+    // Generate val immediately and lock it in ref
     const val = trueRandom()
+    myValRef.current = val
     playDiceSound()
     setIsRolling(true)
-    setPendingValue(prev => ({ ...prev, [userId]: val }))
-    // Wait for full roll animation (2.2s)
+    setDieDisplayValue(val) // pre-set target face
+    // Animation: 2.3s rolling
     await new Promise(r => setTimeout(r, 2300))
     setIsRolling(false)
-    // 1.5s pause — player sees final face clearly
+    // 1.5s pause on final face
     await new Promise(r => setTimeout(r, 1500))
+    // Use the LOCKED ref value, never anything else
+    const lockedVal = myValRef.current
     setPlayerRolls(prev => {
-      const next = { ...prev, [userId]: val }
+      const next = { ...prev, [userId]: lockedVal }
       const allDone = gamePlayers.every(p => next[p.userId] != null)
       if (allDone) setTimeout(() => computeResult(next, gamePlayers.map(p=>p.userId)), 600)
       else setLocalTurn(t => t + 1)
@@ -313,25 +322,27 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
 
   const rollRemote = async () => {
     if (isRolling || playerRolls[myUserId] != null) return
-    // Generate val ONCE and use it everywhere
+    // Lock val immediately in ref - this NEVER changes
     const val = trueRandom()
+    myValRef.current = val
     playDiceSound()
     setIsRolling(true)
-    // Set pendingValue immediately so die snaps to this face during deceleration
-    setPendingValue(prev => ({ ...prev, [myUserId]: val }))
-    // Wait for roll animation
+    setDieDisplayValue(val) // tell die which face to land on
+    // Animation: 2.3s
     await new Promise(r => setTimeout(r, 2300))
     setIsRolling(false)
-    // Show face for 1.5s before revealing score
+    // 1.5s pause to read the face
     await new Promise(r => setTimeout(r, 1500))
-    // Now update DB and local state with the SAME val
+    // Use ONLY the locked ref - ignore any state that might have changed
+    const lockedVal = myValRef.current
+    // Update DB
     const { data: current } = await supabase.from("game_invites").select("game_data").eq("id", inviteId).single()
     const currentRolls = current?.game_data?.rolls || {}
-    const newRolls = { ...currentRolls, [myUserId]: val }
+    const newRolls = { ...currentRolls, [myUserId]: lockedVal }
     const playerIds: string[] = current?.game_data?.player_ids || selected
-    // Update local display (same val as pendingValue)
-    setPlayerRolls(prev => ({ ...prev, [myUserId]: val }))
-    // Update DB
+    // Update local state with locked val
+    setPlayerRolls(prev => ({ ...prev, [myUserId]: lockedVal }))
+    // Push to DB
     await supabase.from("game_invites").update({
       game_data: { ...current?.game_data, rolls: newRolls }
     }).eq("id", inviteId)
@@ -441,7 +452,7 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
                 {currentPlayer?.name}
               </div>
               <button onClick={()=>rollLocal(currentPlayer?.userId)} disabled={isRolling} style={{ background:"none", border:"none", cursor:"pointer", padding:0 }}>
-                <Dice3D value={pendingValue[currentPlayer?.userId] || currentRoll||1} rolling={currentRolling} size={130}/>
+                <Dice3D value={isRolling ? dieDisplayValue : (currentRoll || 1)} rolling={currentRolling} size={130}/>
               </button>
               {!isRolling && currentRoll == null && (
                 <button onClick={()=>rollLocal(currentPlayer?.userId)}
