@@ -383,7 +383,9 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
     ;(profilesData || []).forEach((p: any) => { profileMap[p.id] = p })
     const enriched = membersData.map((m: any) => {
       const prof = profileMap[m.user_id] || {}
-      const drinks: DrinkEntry[] = parseDrinksLog(m.drinks_log)
+      // drinks_log can be text[] or jsonb[] depending on DB schema
+      const rawLog = m.drinks_log || []
+      const drinks: DrinkEntry[] = parseDrinksLog(rawLog)
       return { ...m, pseudo: prof.pseudo||"?", avatar: prof.avatar||"🐺", weight_kg: prof.weight_kg||70, sex: prof.sex||"M", color: m.color||"#a855f7", drinks, isMe: m.user_id===user.id, youngDriver: m.young_driver||false }
     })
     setMembers(enriched)
@@ -402,20 +404,41 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
   const samMember = members.find(m=>m.is_sam)
   const isCreator = myMember?.is_creator||false
 
+  const getMyDrinksLog = () => {
+    if (!myMember) return []
+    const raw = myMember.drinks_log
+    if (!raw) return []
+    // jsonb column returns object/array directly
+    if (Array.isArray(raw)) return raw
+    // sometimes returned as string
+    if (typeof raw === "string") { try { return JSON.parse(raw) } catch { return [] } }
+    return []
+  }
+
   const handleAddDrink = async (drink: DrinkEntry) => {
     if (!myMember) return
-    const serialized = serializeDrink(drink)
-    const currentLog = Array.isArray(myMember.drinks_log) ? myMember.drinks_log : []
-    const newLog = [...currentLog, serialized]
-    await supabase.from("group_members").update({ drinks_log: newLog }).eq("group_id",group.id).eq("user_id",user.id)
-    loadMembers()
+    const currentLog = getMyDrinksLog()
+    const newLog = [...currentLog, serializeDrink(drink)]
+    const { error } = await supabase
+      .from("group_members")
+      .update({ drinks_log: newLog })
+      .eq("group_id", group.id)
+      .eq("user_id", user.id)
+    if (error) { console.error("addDrink error:", JSON.stringify(error)); alert("Erreur: " + error.message) }
+    else loadMembers()
   }
+
   const handleUndo = async () => {
-    const currentLog = Array.isArray(myMember?.drinks_log) ? myMember.drinks_log : []
+    const currentLog = getMyDrinksLog()
     if (!currentLog.length) return
     const newLog = [...currentLog]; newLog.pop()
-    await supabase.from("group_members").update({ drinks_log: newLog }).eq("group_id",group.id).eq("user_id",user.id)
-    loadMembers()
+    const { error } = await supabase
+      .from("group_members")
+      .update({ drinks_log: newLog })
+      .eq("group_id", group.id)
+      .eq("user_id", user.id)
+    if (error) console.error("undo error:", error)
+    else loadMembers()
   }
   const handleSamChosen = async (userId: string, youngDriver: boolean) => {
     await supabase.from("group_members").update({is_sam:false,young_driver:false}).eq("group_id",group.id)
