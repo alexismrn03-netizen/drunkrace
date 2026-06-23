@@ -23,7 +23,8 @@ const CHALLENGES: Challenge[] = [
   { id:"moins50",    label:"−50m !!!",                     emoji:"☠️", color:"#7f1d1d", type:"distance", delta: -50, needsTarget:true },
 ]
 
-// 2x each normal challenge (shuffled) + 1x -50m (3x smaller)
+// 2x each normal challenge (interleaved so same never adjacent) + 1x -50m
+// Interleave: [1,2,3,4,5,6,7,8, 1,2,3,4,5,6,7,8] → shuffle each half then interleave
 function shuffleArray<T>(arr: T[]): T[] {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
@@ -32,11 +33,27 @@ function shuffleArray<T>(arr: T[]): T[] {
   }
   return a
 }
-const BASE_ITEMS = shuffleArray([
-  ...CHALLENGES.slice(0, 8).map(c => ({ ...c })),
-  ...CHALLENGES.slice(0, 8).map(c => ({ ...c })),
-])
-const WHEEL_ITEMS: Challenge[] = [...BASE_ITEMS, CHALLENGES[8]]
+function interleave<T>(arr: T[]): T[] {
+  // Split in half, shuffle each, interleave so same index never adjacent
+  const half = Math.floor(arr.length / 2)
+  const a = shuffleArray(arr.slice(0, half))
+  const b = shuffleArray(arr.slice(half))
+  const result: T[] = []
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    if (i < a.length) result.push(a[i])
+    if (i < b.length) result.push(b[i])
+  }
+  return result
+}
+const BASE = CHALLENGES.slice(0, 8).map(c => ({ ...c }))
+const INTERLEAVED = interleave([...BASE, ...BASE.map(c => ({ ...c }))])
+// Insert -50m at position ~middle so it's surrounded by different ones
+const insertIdx = Math.floor(INTERLEAVED.length / 2)
+const WHEEL_ITEMS: Challenge[] = [
+  ...INTERLEAVED.slice(0, insertIdx),
+  CHALLENGES[8],
+  ...INTERLEAVED.slice(insertIdx),
+]
 
 interface Props {
   members: any[]
@@ -81,8 +98,8 @@ export default function WheelGame({ members, myUserId, onAwardDistance, onClose 
 
   const drawWheelIcon = (ctx: CanvasRenderingContext2D, id: string, color: string, s: number) => {
     ctx.save()
-    ctx.shadowColor = color
-    ctx.shadowBlur = s * 0.4
+    ctx.shadowColor = "#fff"
+    ctx.shadowBlur = s * 0.3
     switch(id) {
       case "shot": {
         // Simple shot glass silhouette
@@ -350,15 +367,17 @@ export default function WheelGame({ members, myUserId, onAwardDistance, onClose 
       }
 
         // Symbol icon on each segment
-      if (SEGMENT_SIZES[i] > 0.18) {
+      if (SEGMENT_SIZES[i] > 0.15) {
         ctx.save()
         ctx.translate(cx, cy)
         ctx.rotate(mid)
-        // Move to middle of segment (radial center)
-        const iconR = R * 0.62
+        // Position at 65% radius
+        const iconR = R * 0.65
         ctx.translate(iconR, 0)
-        ctx.rotate(Math.PI / 2) // face outward
-        drawWheelIcon(ctx, item.id, item.color, SIZE * 0.085)
+        ctx.rotate(Math.PI / 2)
+        // Bigger for normal segments, smaller for -50m
+        const iconSize = item.id === "moins50" ? SIZE * 0.065 : SIZE * 0.1
+        drawWheelIcon(ctx, item.id, item.color, iconSize)
         ctx.restore()
       }
     })
