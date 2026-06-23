@@ -281,15 +281,15 @@ function ProfileTab({ myMember, user, group, onUpdate }: any) {
   const [pseudo, setPseudo] = useState(myMember.pseudo)
   const [weight, setWeight] = useState(String(myMember.weight_kg))
   const [sex,    setSex]    = useState(myMember.sex)
-  const [avatar, setAvatar] = useState(myMember.avatar)
+  const [avatarIdx, setAvatarIdx] = useState(parseInt(myMember.avatar) || 0)
   const [saved,  setSaved]  = useState(false)
   const [copied, setCopied] = useState(false)
   const supabase = createClient()
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://drunkrace.vercel.app"
 
   const save = async () => {
-    await supabase.from("profiles").update({ pseudo, weight_kg:parseInt(weight)||70, sex, avatar }).eq("id", user.id)
-    onUpdate({ pseudo, weight_kg:parseInt(weight)||70, sex, avatar }); setSaved(true); setTimeout(()=>setSaved(false),1500)
+    await supabase.from("profiles").update({ pseudo, weight_kg:parseInt(weight)||70, sex, avatar: String(avatarIdx) }).eq("id", user.id)
+    onUpdate({ pseudo, weight_kg:parseInt(weight)||70, sex, avatar: String(avatarIdx) }); setSaved(true); setTimeout(()=>setSaved(false),1500)
   }
 
   const copyInvite = () => {
@@ -314,7 +314,7 @@ function ProfileTab({ myMember, user, group, onUpdate }: any) {
       </div>
 
       <div style={{ textAlign:"center",marginBottom:16 }}>
-        <div style={{ fontSize:52,marginBottom:8 }}>{avatar}</div>
+        <DrunkAvatar avatarIndex={avatarIdx} color="#a855f7" bac={0} size={90} animate={false}/>
         <div style={{ display:"inline-block",background:"linear-gradient(135deg,#a855f7,#ec4899)",borderRadius:20,padding:"4px 16px",fontSize:13,fontWeight:700,color:"#fff" }}>{pseudo}</div>
       </div>
 
@@ -322,8 +322,8 @@ function ProfileTab({ myMember, user, group, onUpdate }: any) {
         <div style={{ fontSize:11,fontWeight:700,color:"#6b7280",letterSpacing:1,textTransform:"uppercase" as const,marginBottom:8 }}>Avatar</div>
         <div style={{ display:"flex",flexWrap:"wrap" as const,gap:8 }}>
           {Array.from({length:12},(_,i)=>(
-            <button key={i} onClick={()=>setAvatar(String(i))} style={{ padding:4,borderRadius:10,border:"none",cursor:"pointer",background:avatar===String(i)?"#3b1f6a":"#1e1e2e",outline:avatar===String(i)?"2px solid #a855f7":"2px solid transparent" }}>
-              <DrunkAvatar avatarIndex={i} color="#a855f7" bac={0} size={40}/>
+            <button key={i} onClick={()=>setAvatarIdx(i)} style={{ padding:4,borderRadius:10,border:"none",cursor:"pointer",background:avatarIdx===i?"#3b1f6a":"#1e1e2e",outline:avatarIdx===i?"2px solid #a855f7":"2px solid transparent" }}>
+              <DrunkAvatar avatarIndex={i} color="#a855f7" bac={0} size={40} animate={false}/>
             </button>
           ))}
         </div>
