@@ -249,7 +249,13 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
       .on("postgres_changes", { event:"UPDATE", schema:"public", table:"game_invites", filter:`id=eq.${inviteId}` }, (payload:any) => {
         const rolls: Record<string,number> = payload.new.game_data?.rolls || {}
         const playerIds: string[] = payload.new.game_data?.player_ids || selected
+        // CRITICAL: always inject our locked ref value for our own userId
+        // The DB might not have our value yet (we're still in the await chain)
+        if (myValRef.current) {
+          rolls[myUserId] = myValRef.current
+        }
         setPlayerRolls(rolls)
+        // Only trigger computeResult if ALL players have rolled
         if (playerIds.every(id => rolls[id] != null)) {
           computeResult(rolls, playerIds)
         }
