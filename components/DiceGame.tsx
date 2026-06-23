@@ -229,7 +229,8 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
   const [playerRolls, setPlayerRolls] = useState<Record<string,number|null>>({})
   const [localTurn, setLocalTurn] = useState(0)
   const [isRolling, setIsRolling] = useState(false)
-  const myValRef = useRef<number>(1) // locked value from the moment dice is thrown
+  const myValRef = useRef<number>(0) // 0 = not yet rolled
+  const isRollingRef = useRef(false) // blocks realtime updates during animation
   const [dieDisplayValue, setDieDisplayValue] = useState(1) // what the die shows visually
   const [phase, setPhase] = useState<Phase>(invite ? "rolling" : "setup")
   const [losers, setLosers] = useState<string[]>([])
@@ -249,13 +250,14 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
       .on("postgres_changes", { event:"UPDATE", schema:"public", table:"game_invites", filter:`id=eq.${inviteId}` }, (payload:any) => {
         const rolls: Record<string,number> = payload.new.game_data?.rolls || {}
         const playerIds: string[] = payload.new.game_data?.player_ids || selected
-        // CRITICAL: always inject our locked ref value for our own userId
-        // The DB might not have our value yet (we're still in the await chain)
-        if (myValRef.current) {
+        // If we haven't finished our own roll animation yet, skip this update entirely
+        // We'll trigger computeResult ourselves at the end of rollRemote
+        if (isRollingRef.current) return
+        // Inject our locked value (in case we finished but DB update was slow)
+        if (myValRef.current > 0) {
           rolls[myUserId] = myValRef.current
         }
         setPlayerRolls(rolls)
-        // Only trigger computeResult if ALL players have rolled
         if (playerIds.every(id => rolls[id] != null)) {
           computeResult(rolls, playerIds)
         }
@@ -265,9 +267,9 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
   }, [inviteId, mode])
 
   const computeResult = (rolls: Record<string,number|null>, playerIds: string[]) => {
-    // Always use myValRef for our own value — it's the source of truth
+    // Always use myValRef for our own value if it has been set (>0)
     const resolvedRolls = { ...rolls }
-    if (myValRef.current && !resolvedRolls[myUserId]) {
+    if (myValRef.current > 0) {
       resolvedRolls[myUserId] = myValRef.current
     }
     const vals = playerIds.map(id => ({
@@ -331,6 +333,7 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
     // Lock val immediately in ref - this NEVER changes
     const val = trueRandom()
     myValRef.current = val
+    isRollingRef.current = true // block realtime updates
     playDiceSound()
     setIsRolling(true)
     setDieDisplayValue(val) // tell die which face to land on
@@ -339,16 +342,16 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
     setIsRolling(false)
     // 1.5s pause to read the face
     await new Promise(r => setTimeout(r, 1500))
-    // Use ONLY the locked ref - ignore any state that might have changed
-    const lockedVal = myValRef.current
-    // Update DB
+    // Animation done - now safe to unblock realtime and write to DB
+    isRollingRef.current = false
+    const lockedVal = myValRef.current // still the same val we locked at the start
+    // Update local state FIRST (so display is correct)
+    setPlayerRolls(prev => ({ ...prev, [myUserId]: lockedVal }))
+    // Then push to DB
     const { data: current } = await supabase.from("game_invites").select("game_data").eq("id", inviteId).single()
     const currentRolls = current?.game_data?.rolls || {}
     const newRolls = { ...currentRolls, [myUserId]: lockedVal }
     const playerIds: string[] = current?.game_data?.player_ids || selected
-    // Update local state with locked val
-    setPlayerRolls(prev => ({ ...prev, [myUserId]: lockedVal }))
-    // Push to DB
     await supabase.from("game_invites").update({
       game_data: { ...current?.game_data, rolls: newRolls }
     }).eq("id", inviteId)
