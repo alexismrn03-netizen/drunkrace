@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect, useRef } from "react"
+import { createClient } from "@/lib/supabase"
 
 type Phase = "setup" | "rolling" | "result" | "tiebreak"
 
@@ -80,18 +81,26 @@ interface PlayerRoll {
 
 interface Props {
   members: any[]
+  myUserId: string
+  groupId: string
   onAwardDistance: (userId: string, delta: number) => void
   onClose: () => void
 }
 
 const COLORS = ["#c084fc","#ec4899","#fbbf24","#4ade80","#60a5fa","#f87171"]
 
-export default function DiceGame({ members, onAwardDistance, onClose }: Props) {
+export default function DiceGame({ members, myUserId, groupId, onAwardDistance, onClose }: Props) {
+  const supabase = createClient()
+  const [mode, setMode] = useState<"select"|"local"|"invite"|null>(null)
   const [phase, setPhase] = useState<Phase>("setup")
   const [selected, setSelected] = useState<string[]>([])
   const [rolls, setRolls] = useState<PlayerRoll[]>([])
   const [currentTurn, setCurrentTurn] = useState(0)
   const [tiebreakIds, setTiebreakIds] = useState<string[]>([])
+  const [inviteId, setInviteId] = useState("")
+  const [invitedIds, setInvitedIds] = useState<string[]>([])
+  const [remoteRolls, setRemoteRolls] = useState<Record<string,number>>({})
+  const [sending, setSending] = useState(false)
 
   const activePlayers = members.filter(m => !m.is_sam)
 
@@ -176,12 +185,85 @@ export default function DiceGame({ members, onAwardDistance, onClose }: Props) {
     overflowY: "auto", padding: "24px 16px 40px",
   }
 
+  // ── MODE SELECT ──────────────────────────────────────────────────────────
+  if (!mode) return (
+    <div style={BG}>
+      <div style={{ display:"flex", justifyContent:"space-between", width:"100%", maxWidth:360, marginBottom:24, alignItems:"center" }}>
+        <h2 style={{ fontFamily:"'Bebas Neue',cursive", fontSize:28, letterSpacing:3, background:"linear-gradient(135deg,#c084fc,#ec4899)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", margin:0 }}>
+          🎲 JEU DU DÉ
+        </h2>
+        <button onClick={onClose} style={{ background:"none", border:"none", color:"#6b7280", fontSize:22, cursor:"pointer" }}>✕</button>
+      </div>
+      <div style={{ width:"100%", maxWidth:360, display:"flex", flexDirection:"column" as const, gap:14 }}>
+        <button onClick={() => setMode("local")}
+          style={{ padding:"24px", borderRadius:18, border:"1px solid #78350f", cursor:"pointer", background:"linear-gradient(135deg,#1a0a00,#100600)", textAlign:"left" as const }}>
+          <div style={{ fontSize:32, marginBottom:8 }}>📱</div>
+          <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:20, color:"#fbbf24", letterSpacing:2, marginBottom:4 }}>Même téléphone</div>
+          <div style={{ fontSize:12, color:"#6b7280", lineHeight:1.5 }}>Chaque joueur lance depuis ce téléphone, à tour de rôle.</div>
+        </button>
+        <button onClick={() => setMode("invite")}
+          style={{ padding:"24px", borderRadius:18, border:"1px solid #1e3a8a", cursor:"pointer", background:"linear-gradient(135deg,#0c1a3a,#071020)", textAlign:"left" as const }}>
+          <div style={{ fontSize:32, marginBottom:8 }}>📨</div>
+          <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:20, color:"#60a5fa", letterSpacing:2, marginBottom:4 }}>Inviter les joueurs</div>
+          <div style={{ fontSize:12, color:"#6b7280", lineHeight:1.5 }}>Chaque joueur lance depuis son propre téléphone en temps réel.</div>
+        </button>
+      </div>
+    </div>
+  )
+
+  // ── INVITE MODE SETUP ─────────────────────────────────────────────────────
+  if (mode === "invite" && phase === "setup" && !inviteId) return (
+    <div style={{ ...BG, justifyContent:"flex-start", paddingTop:32 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", width:"100%", maxWidth:360, marginBottom:20 }}>
+        <h2 style={{ fontFamily:"'Bebas Neue',cursive", fontSize:24, letterSpacing:3, color:"#60a5fa", margin:0 }}>🎲 INVITER DES JOUEURS</h2>
+        <button onClick={()=>setMode(null)} style={{ background:"none", border:"none", color:"#6b7280", fontSize:18, cursor:"pointer" }}>← Retour</button>
+      </div>
+      <div style={{ background:"#13131f", borderRadius:14, padding:14, border:"1px solid #2a2a3e", marginBottom:16, width:"100%", maxWidth:360 }}>
+        <div style={{ fontSize:11, color:"#9ca3af", lineHeight:1.7 }}>
+          Sélectionne les joueurs à inviter. Chacun lancera le dé depuis son propre téléphone 📱
+        </div>
+      </div>
+      <div style={{ width:"100%", maxWidth:360, marginBottom:20 }}>
+        {members.filter((m:any)=>m.user_id!==myUserId&&!m.is_sam).map((m:any,i:number)=>(
+          <button key={m.user_id} onClick={()=>{ if(selected.includes(m.user_id)) setSelected(s=>s.filter(x=>x!==m.user_id)); else if(selected.length<5) setSelected(s=>[...s,m.user_id]) }}
+            style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px", borderRadius:12, border:"none", cursor:"pointer", width:"100%", marginBottom:8,
+              background:selected.includes(m.user_id)?`${COLORS[selected.indexOf(m.user_id)]}18`:"#1e1e2e",
+              outline:selected.includes(m.user_id)?`2px solid ${COLORS[selected.indexOf(m.user_id)]}`:"2px solid transparent" }}>
+            <span style={{ fontSize:13, fontWeight:600, color:"#e2e8f0", flex:1, textAlign:"left" as const }}>{m.pseudo}</span>
+            {selected.includes(m.user_id)&&<div style={{ width:12, height:12, borderRadius:"50%", background:COLORS[selected.indexOf(m.user_id)] }}/>}
+          </button>
+        ))}
+      </div>
+      <button onClick={async()=>{
+        if(selected.length<1){return}
+        setSending(true)
+        const allIds=[myUserId,...selected]
+        const {data,error}=await supabase.from("game_invites").insert({
+          group_id:groupId, game_type:"dice",
+          from_user_id:myUserId, to_user_id:selected[0],
+          status:"pending", game_data:{ player_ids:allIds, rolls:{} }
+        }).select().single()
+        if(error){alert("Erreur: "+error.message);setSending(false);return}
+        setInviteId(data.id)
+        setInvitedIds(allIds)
+        setSelected(allIds)
+        setSending(false)
+        setPhase("rolling")
+      }} disabled={selected.length<1||sending}
+        style={{ width:"100%", maxWidth:360, padding:"15px", borderRadius:14, border:"none", cursor:selected.length>=1?"pointer":"not-allowed",
+          background:selected.length>=1?"linear-gradient(135deg,#3b82f6,#1d4ed8)":"#2a2a3e",
+          color:selected.length>=1?"#fff":"#6b7280", fontSize:15, fontWeight:700 }}>
+        {sending?"⏳ Envoi…":"📨 Envoyer les invitations !"}
+      </button>
+    </div>
+  )
+
   // ── SETUP ────────────────────────────────────────────────────────────────
   if (phase === "setup") return (
     <div style={BG}>
       <div style={{ display:"flex", justifyContent:"space-between", width:"100%", maxWidth:360, marginBottom:20 }}>
-        <h2 style={{ fontFamily:"'Bebas Neue',cursive", fontSize:28, letterSpacing:3, background:"linear-gradient(135deg,#c084fc,#ec4899)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", margin:0 }}>
-          🎲 JEU DU DÉ
+        <h2 style={{ fontFamily:"'Bebas Neue',cursive", fontSize:26, letterSpacing:3, background:"linear-gradient(135deg,#c084fc,#ec4899)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", margin:0 }}>
+          🎲 MÊME TÉLÉPHONE
         </h2>
         <button onClick={onClose} style={{ background:"none", border:"none", color:"#6b7280", fontSize:22, cursor:"pointer" }}>✕</button>
       </div>
@@ -228,6 +310,9 @@ export default function DiceGame({ members, onAwardDistance, onClose }: Props) {
           background: selected.length >= 2 ? "linear-gradient(135deg,#a855f7,#ec4899)" : "#2a2a3e",
           color: selected.length >= 2 ? "#fff" : "#6b7280", fontSize:16, fontWeight:700 }}>
         🎲 Lancer la partie !
+      </button>
+      <button onClick={()=>setMode(null)} style={{ marginTop:10, width:"100%", maxWidth:360, padding:"11px", borderRadius:13, border:"1px solid #2a2a3e", background:"none", color:"#6b7280", fontSize:13, cursor:"pointer" }}>
+        ← Retour
       </button>
     </div>
   )

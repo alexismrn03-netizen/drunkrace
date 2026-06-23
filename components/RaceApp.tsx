@@ -697,7 +697,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
       {showDuel&&<DuelGame members={members} onAwardDistance={handleAwardDistance} onClose={()=>setShowDuel(false)}/>}
       {showGlobalProfile&&<GlobalProfile user={user} profile={profile} onClose={()=>setShowGlobalProfile(false)}/>}
       {showRPS&&<RPSGame members={members} myUserId={user.id} groupId={group.id} onAwardDistance={handleAwardSimple} onClose={()=>setShowRPS(false)}/>}
-      {showDice&&<DiceGame members={members} onAwardDistance={handleAwardSimple} onClose={()=>setShowDice(false)}/>}
+      {showDice&&<DiceGame members={members} myUserId={user.id} groupId={group.id} onAwardDistance={handleAwardSimple} onClose={()=>setShowDice(false)}/>}
       {incomingRPS&&<RPSGame members={members} myUserId={user.id} groupId={group.id} invite={incomingRPS} onAwardDistance={handleAwardSimple} onClose={()=>setIncomingRPS(null)}/>}
     </div>
   )
