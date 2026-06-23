@@ -4,6 +4,65 @@ import { DRINK_BASES, DRINK_CATEGORIES, alcoholGrams, calcDistance, type DrinkEn
 
 type Phase = "setup" | "ready1" | "lights" | "p1" | "ready2" | "p2" | "result"
 
+// ── SOUND ENGINE ─────────────────────────────────────────────────────────────
+function playSound(type: "light_on" | "go" | "stop" | "beep") {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const g = ctx.createGain()
+    g.connect(ctx.destination)
+
+    if (type === "light_on") {
+      // Deep thump when each red light turns on
+      const o = ctx.createOscillator()
+      o.connect(g)
+      o.type = "sine"
+      o.frequency.setValueAtTime(80, ctx.currentTime)
+      o.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.15)
+      g.gain.setValueAtTime(0.5, ctx.currentTime)
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2)
+      o.start(); o.stop(ctx.currentTime + 0.2)
+    }
+
+    if (type === "go") {
+      // High-pitched GO sound — ascending beeps
+      ;[0, 0.08, 0.16].forEach((delay, i) => {
+        const o = ctx.createOscillator()
+        const gNode = ctx.createGain()
+        o.connect(gNode); gNode.connect(ctx.destination)
+        o.type = "square"
+        o.frequency.setValueAtTime(440 + i * 220, ctx.currentTime + delay)
+        gNode.gain.setValueAtTime(0.3, ctx.currentTime + delay)
+        gNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.25)
+        o.start(ctx.currentTime + delay)
+        o.stop(ctx.currentTime + delay + 0.25)
+      })
+    }
+
+    if (type === "stop") {
+      // Buzzer / finish sound
+      const o = ctx.createOscillator()
+      o.connect(g)
+      o.type = "sawtooth"
+      o.frequency.setValueAtTime(660, ctx.currentTime)
+      o.frequency.exponentialRampToValueAtTime(220, ctx.currentTime + 0.3)
+      g.gain.setValueAtTime(0.4, ctx.currentTime)
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35)
+      o.start(); o.stop(ctx.currentTime + 0.35)
+    }
+
+    if (type === "beep") {
+      // Countdown tick
+      const o = ctx.createOscillator()
+      o.connect(g)
+      o.type = "sine"
+      o.frequency.setValueAtTime(880, ctx.currentTime)
+      g.gain.setValueAtTime(0.2, ctx.currentTime)
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1)
+      o.start(); o.stop(ctx.currentTime + 0.1)
+    }
+  } catch (e) { /* Audio not supported */ }
+}
+
 interface Player {
   name: string
   drinkId: string
@@ -56,14 +115,14 @@ export default function DuelGame({ members, onAwardDistance, onClose }: Props) {
       count++
       if (count <= 5) {
         setLights(count)
+        playSound("light_on")
       } else {
         clearInterval(lightsRef.current)
-        // Random delay 0.2-0.8s (real F1 style)
         const delay = 200 + Math.random() * 600
         setTimeout(() => {
           setLights(-1)
           setPhase(targetPhase)
-          // Auto-start timer!
+          playSound("go")
           const t = Date.now()
           setStartTime(t)
           setDrinking(true)
@@ -76,17 +135,14 @@ export default function DuelGame({ members, onAwardDistance, onClose }: Props) {
 
   const handlePress = () => {
     if (phase === "p1" && drinking) {
-      // P1 stops
+      playSound("stop")
       const time = Date.now() - startTime
       setP1(prev => ({ ...prev, time }))
       setDrinking(false)
       setElapsed(time)
-      // Go to ready2 screen
-      setTimeout(() => {
-        setPhase("ready2")
-      }, 800)
+      setTimeout(() => { setPhase("ready2") }, 800)
     } else if (phase === "p2" && drinking) {
-      // P2 stops
+      playSound("stop")
       const time = Date.now() - startTime
       setP2(prev => ({ ...prev, time }))
       setDrinking(false)
