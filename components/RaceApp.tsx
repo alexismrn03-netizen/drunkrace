@@ -532,6 +532,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
   const [showDice, setShowDice]       = useState(false)
   const [showGlobalProfile, setShowGlobalProfile] = useState(false)
   const [incomingRPS, setIncomingRPS] = useState<any>(null)
+  const [incomingDice, setIncomingDice] = useState<any>(null)
   const [ended, setEnded]       = useState(group.status==="finished")
   const supabase = createClient()
 
@@ -568,8 +569,15 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
         event: "INSERT", schema: "public", table: "game_invites",
         filter: `to_user_id=eq.${user.id}`
       }, (payload: any) => {
-        if (payload.new.group_id === group.id && payload.new.game_type === "rps" && payload.new.status === "pending") {
-          setIncomingRPS(payload.new)
+        if (payload.new.group_id === group.id && payload.new.status === "pending") {
+          if (payload.new.game_type === "rps") setIncomingRPS(payload.new)
+          if (payload.new.game_type === "dice") {
+            // Check if I'm in the player_ids list
+            const playerIds = payload.new.game_data?.player_ids || []
+            if (playerIds.includes(user.id) && payload.new.from_user_id !== user.id) {
+              setIncomingDice(payload.new)
+            }
+          }
         }
       })
       .subscribe()
@@ -679,6 +687,19 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
       {tab==="profile" && <ProfileTab myMember={myMember} user={user} group={group} onUpdate={(p:any)=>{setMembers(prev=>prev.map(m=>m.isMe?{...m,...p}:m));onProfileUpdate()}} onShowGlobal={()=>setShowGlobalProfile(true)}/>}
       <TabBar active={tab} onChange={setTab}/>
       {/* Incoming invite banner */}
+      {incomingDice && !showDice && (
+        <div style={{position:"fixed",top:0,left:0,right:0,zIndex:500,background:"linear-gradient(135deg,#92400e,#78350f)",padding:"14px 16px",display:"flex",alignItems:"center",gap:12}}>
+          <span style={{fontSize:22}}>🎲</span>
+          <div style={{flex:1}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#fff"}}>Défi dé reçu !</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.8)"}}>
+              {members.find((m:any)=>m.user_id===incomingDice.from_user_id)?.pseudo} t'invite à jouer au dé !
+            </div>
+          </div>
+          <button onClick={()=>setIncomingDice(null)} style={{background:"rgba(255,255,255,0.2)",border:"none",borderRadius:8,color:"#fff",fontSize:11,padding:"4px 8px",cursor:"pointer",marginRight:4}}>Refuser</button>
+          <button onClick={()=>setShowDice(true)} style={{background:"#fff",border:"none",borderRadius:8,color:"#92400e",fontSize:11,padding:"4px 10px",cursor:"pointer",fontWeight:700}}>Jouer !</button>
+        </div>
+      )}
       {incomingRPS && !showRPS && (
         <div style={{position:"fixed",top:0,left:0,right:0,zIndex:500,background:"linear-gradient(135deg,#a855f7,#ec4899)",padding:"14px 16px",display:"flex",alignItems:"center",gap:12}}>
           <span style={{fontSize:22}}>🤜</span>
@@ -697,7 +718,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
       {showDuel&&<DuelGame members={members} onAwardDistance={handleAwardDistance} onClose={()=>setShowDuel(false)}/>}
       {showGlobalProfile&&<GlobalProfile user={user} profile={profile} onClose={()=>setShowGlobalProfile(false)}/>}
       {showRPS&&<RPSGame members={members} myUserId={user.id} groupId={group.id} onAwardDistance={handleAwardSimple} onClose={()=>setShowRPS(false)}/>}
-      {showDice&&<DiceGame members={members} myUserId={user.id} groupId={group.id} onAwardDistance={handleAwardSimple} onClose={()=>setShowDice(false)}/>}
+      {showDice&&<DiceGame members={members} myUserId={user.id} groupId={group.id} invite={incomingDice} onAwardDistance={handleAwardSimple} onClose={()=>{setShowDice(false);setIncomingDice(null)}}/>}
       {incomingRPS&&<RPSGame members={members} myUserId={user.id} groupId={group.id} invite={incomingRPS} onAwardDistance={handleAwardSimple} onClose={()=>setIncomingRPS(null)}/>}
     </div>
   )
