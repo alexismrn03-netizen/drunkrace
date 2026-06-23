@@ -183,7 +183,7 @@ function RedFlagModal({ members, myId, groupId, onClose }: any) {
 }
 
 // ── RACE TRACK ───────────────────────────────────────────────────────────────
-function RaceTrack({ members, samMember, isCreator, group, events, onShowWheel, onRemoveSam, onEndRace, onRedFlag, myId }: any) {
+function RaceTrack({ members, samMember, isCreator, group, events, onShowWheel, onRemoveSam, onEndRace, onRedFlag, onRedFlagPhotos, redFlagCount, myId }: any) {
   const drinkers = members.filter((m:any)=>m.user_id!==samMember?.user_id)
   const maxDist  = Math.max(...drinkers.map((m:any)=>memberDist(m.drinks)),10)
   const sorted   = [...drinkers].sort((a:any,b:any)=>memberDist(b.drinks)-memberDist(a.drinks))
@@ -238,20 +238,13 @@ function RaceTrack({ members, samMember, isCreator, group, events, onShowWheel, 
         <button onClick={onRedFlag} style={{flex:1,padding:"10px",borderRadius:12,border:"1px solid #7f1d1d",background:"#1c0505",cursor:"pointer",color:"#f87171",fontSize:12,fontWeight:700}}>
           🚩 Drapeau Rouge (−5m)
         </button>
+        <button onClick={onRedFlagPhotos} style={{padding:"10px 14px",borderRadius:12,border:"1px solid #7f1d1d",background:"#1c0505",cursor:"pointer",color:"#f87171",fontSize:16,position:"relative" as const}}>
+          📸
+          {redFlagCount > 0 && <span style={{position:"absolute" as const,top:-4,right:-4,background:"#ef4444",borderRadius:"50%",width:16,height:16,fontSize:9,fontWeight:700,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center"}}>{redFlagCount}</span>}
+        </button>
       </div>
 
-      {/* Recent events */}
-      {recentEvents.length > 0 && (
-        <div style={{marginBottom:12}}>
-          {recentEvents.map((ev:any)=>(
-            <div key={ev.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:"#1c0505",border:"1px solid #7f1d1d",borderRadius:10,marginBottom:4}}>
-              <span style={{fontSize:14}}>🚩</span>
-              <span style={{fontSize:11,color:"#f87171",flex:1}}><strong>{ev.target_pseudo||"?"}</strong> a vomi → −5m</span>
-              <span style={{fontSize:9,color:"#6b7280"}}>{fmtTime(new Date(ev.created_at).getTime())}</span>
-            </div>
-          ))}
-        </div>
-      )}
+
 
       {/* Circuit */}
       <div style={{background:"#111827",borderRadius:20,padding:"16px 12px",border:"1px solid #1f2937",marginBottom:14,overflow:"hidden",position:"relative"}}>
@@ -524,6 +517,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
   const [showRPS, setShowRPS]         = useState(false)
   const [showDice, setShowDice]       = useState(false)
   const [showChallengeWheel, setShowChallengeWheel] = useState(false)
+  const [showRedFlagPhotos, setShowRedFlagPhotos] = useState(false)
   const [showGlobalProfile, setShowGlobalProfile] = useState(false)
   const [incomingRPS, setIncomingRPS] = useState<any>(null)
   const [incomingDice, setIncomingDice] = useState<any>(null)
@@ -682,7 +676,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
 
   return (
     <div style={{background:"#0a0a14",minHeight:"100vh",maxWidth:480,margin:"0 auto",position:"relative"}}>
-      {tab==="race"    && <RaceTrack members={members} samMember={samMember} isCreator={isCreator} group={group} events={events} onShowWheel={()=>setShowWheel(true)} onRemoveSam={handleRemoveSam} onEndRace={handleEndRace} onRedFlag={()=>setShowRedFlag(true)} myId={user.id}/>}
+      {tab==="race"    && <RaceTrack members={members} samMember={samMember} isCreator={isCreator} group={group} events={events} onShowWheel={()=>setShowWheel(true)} onRemoveSam={handleRemoveSam} onEndRace={handleEndRace} onRedFlag={()=>setShowRedFlag(true)} onRedFlagPhotos={()=>setShowRedFlagPhotos(true)} redFlagCount={events.filter((e:any)=>e.type==="red_flag").length} myId={user.id}/>}
       {tab==="drink"   && <DrinkTab myMember={myMember} samMember={samMember} onAddDrink={handleAddDrink} onUndo={handleUndo}/>}
       {tab==="games"   && <GamesTab members={members} myUserId={user.id} groupId={group.id} onAwardDistance={handleAwardSimple} onAwardDrink={handleAwardDistance}/>}
       {tab==="stats"   && <StatsTab myMember={myMember} members={members} samMember={samMember} events={events}/>}
@@ -723,6 +717,39 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
       {showRPS&&<RPSGame members={members} myUserId={user.id} groupId={group.id} onAwardDistance={handleAwardSimple} onClose={()=>setShowRPS(false)}/>}
       {showDice&&<DiceGame members={members} myUserId={user.id} groupId={group.id} invite={incomingDice} onAwardDistance={handleAwardSimple} onClose={()=>{setShowDice(false);setIncomingDice(null)}}/> }
       {showChallengeWheel&&<WheelGame members={members} myUserId={user.id} onAwardDistance={handleAwardSimple} onClose={()=>setShowChallengeWheel(false)}/>}
+      {showRedFlagPhotos&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.95)",zIndex:400,overflowY:"auto",padding:"24px 16px 40px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+            <h2 style={{fontFamily:"'Bebas Neue',cursive",fontSize:24,letterSpacing:3,color:"#f87171",margin:0}}>🚩 Drapeaux Rouges</h2>
+            <button onClick={()=>setShowRedFlagPhotos(false)} style={{background:"none",border:"none",color:"#6b7280",fontSize:22,cursor:"pointer"}}>✕</button>
+          </div>
+          {events.filter((e:any)=>e.type==="red_flag").length===0?(
+            <div style={{textAlign:"center",padding:"40px 0",color:"#4b5563"}}>
+              <div style={{fontSize:40,marginBottom:8}}>🚩</div>
+              <div style={{fontSize:13}}>Aucun drapeau rouge pour l'instant</div>
+            </div>
+          ):(
+            <div style={{display:"flex",flexDirection:"column" as const,gap:12}}>
+              {events.filter((e:any)=>e.type==="red_flag").map((e:any)=>{
+                const victim=members.find((m:any)=>m.user_id===e.target_user_id)
+                return (
+                  <div key={e.id} style={{background:"#13131f",borderRadius:14,overflow:"hidden",border:"1px solid #7f1d1d"}}>
+                    {e.photo_url&&<img src={e.photo_url} style={{width:"100%",maxHeight:220,objectFit:"cover",display:"block"}} alt="drapeau rouge"/>}
+                    <div style={{padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
+                      <span style={{fontSize:16}}>🚩</span>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:13,fontWeight:700,color:"#f87171"}}>{victim?.pseudo||"?"}</div>
+                        <div style={{fontSize:10,color:"#6b7280"}}>{fmtTime(new Date(e.created_at).getTime())} · −5m</div>
+                      </div>
+                      {!e.photo_url&&<span style={{fontSize:11,color:"#4b5563"}}>Pas de photo</span>}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
       {incomingRPS&&<RPSGame members={members} myUserId={user.id} groupId={group.id} invite={incomingRPS} onAwardDistance={handleAwardSimple} onClose={()=>setIncomingRPS(null)}/>}
     </div>
   )
