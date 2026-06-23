@@ -34,15 +34,13 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
   const [targetUserId, setTargetUserId] = useState(invite?.to_user_id || "")
   const [inviteId, setInviteId] = useState(invite?.id || "")
   const [myChoice, setMyChoice] = useState<Choice>(null)
+  const p1ChoiceRef = useRef<Choice>(null)
   const [opponentChoice, setOpponentChoice] = useState<Choice>(null)
-  const [lights, setLights] = useState(0)
-  const [lightsGo, setLightsGo] = useState(false)
-  const [result, setResult] = useState<"win"|"lose"|"draw"|null>(null)
+  const [result, setResult] = useState<"win"|"lose"|"draw"|"win_p1"|"win_p2"|null>(null)
   const [sending, setSending] = useState(false)
   const [modeSelected, setModeSelected] = useState<'local'|'invite'|null>(invite ? 'invite' : null)
   const [isLocalP1, setIsLocalP1] = useState(true)
   const [localP2Choice, setLocalP2Choice] = useState<Choice>(null)
-  const lightsRef = useRef<any>(null)
 
   const me = members.find(m => m.user_id === myUserId)
   const opponent = members.find(m => m.user_id === (isChallenger ? targetUserId : invite?.from_user_id))
@@ -117,41 +115,25 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
   }
 
   // Launch F1 lights then allow choice
-  const launchLights = (nextPhase: "choose_p1" | "choose_p2") => {
-    setLights(0); setLightsGo(false)
-    const targetPhase = nextPhase
-    let count = 0
-    lightsRef.current = setInterval(() => {
-      count++
-      if (count <= 5) setLights(count)
-      else {
-        clearInterval(lightsRef.current)
-        const delay = 300 + Math.random() * 700
-        setTimeout(() => { setLightsGo(true); setPhase(targetPhase) }, delay)
-      }
-    }, 600)
-    setPhase(nextPhase === "choose_p1" ? "lights_p1" : "lights_p2")
-  }
 
-  useEffect(() => () => clearInterval(lightsRef.current), [])
 
   // Submit my choice
   const submitChoice = async (c: Choice) => {
     setMyChoice(c)
     if (modeSelected === "local") {
-      // Local mode: no DB needed
       if (isLocalP1) {
+        // P1 chose — save to ref AND state
+        p1ChoiceRef.current = c
         setMyChoice(c)
         setIsLocalP1(false)
         setPhase("ready_p2")
       } else {
-        // P2 chose, compute result
-        const p1c = myChoice // already stored from P1
-        setOpponentChoice(c)
-        const w = getWinner(p1c!, c)
-        const iWin = w === "p2" // we're checking from P2's perspective but we award based on actual result
-        setResult(w === "draw" ? "draw" : w === "p1" ? "lose" : "win") // P2's perspective: p1win = p2 lose
+        // P2 chose — use ref to get P1's choice (state might be stale)
+        const p1c = p1ChoiceRef.current
         setLocalP2Choice(c)
+        setOpponentChoice(c)
+        const w = getWinner(p1c, c)
+        setResult(w === "draw" ? "draw" : w === "p1" ? "win_p1" : "win_p2")
         setPhase("result")
       }
       return
@@ -188,12 +170,10 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
   const applyAndClose = () => {
     if (!result) return
     if (modeSelected === "local") {
-      // In local: myChoice = P1, localP2Choice = P2
-      const w = getWinner(myChoice, localP2Choice)
       const p1Id = myUserId
       const p2Id = targetUserId
-      if (w === "p1") { onAwardDistance(p1Id, 8); if(p2Id) onAwardDistance(p2Id, -3) }
-      else if (w === "p2") { onAwardDistance(p2Id, 8); if(p1Id) onAwardDistance(p1Id, -3) }
+      if (result === "win_p1") { onAwardDistance(p1Id, 8); if(p2Id) onAwardDistance(p2Id, -3) }
+      else if (result === "win_p2") { if(p2Id) onAwardDistance(p2Id, 8); onAwardDistance(p1Id, -3) }
       else { onAwardDistance(p1Id, 2); if(p2Id) onAwardDistance(p2Id, 2) }
     } else {
       const myId = myUserId
@@ -334,54 +314,31 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
     </div>
   )
 
-  // ── READY SCREENS ────────────────────────────────────────────────────────
+  // ── READY SCREENS → direct choose (pas de feux) ──────────────────────────
   if (phase === "ready_p1" || phase === "ready_p2") {
     const isP1 = phase === "ready_p1"
     const color = isP1 ? "#ef4444" : "#3b82f6"
     const bg = isP1 ? "#1c0505" : "#0c1a3a"
     const border = isP1 ? "#7f1d1d" : "#1e3a8a"
-    const label = isP1 ? "🔴 CHALLENGER" : "🔵 ADVERSAIRE"
     const nextPhase = isP1 ? "choose_p1" : "choose_p2"
+    const playerName = isP1 ? (me?.pseudo || "Joueur 1") : (opponent?.pseudo || "Joueur 2")
     return (
       <div style={BG}>
         <div style={{ background:bg, border:`2px solid ${border}`, borderRadius:24, padding:"28px 24px", textAlign:"center", width:"100%", maxWidth:340, marginBottom:32 }}>
-          <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:14, color, letterSpacing:3, marginBottom:8 }}>{label}</div>
-          <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:28, color:"#e2e8f0", letterSpacing:2, marginBottom:12 }}>{me?.pseudo}</div>
+          <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:14, color, letterSpacing:3, marginBottom:8 }}>
+            {isP1 ? "🔴 CHALLENGER" : "🔵 ADVERSAIRE"}
+          </div>
+          <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:28, color:"#e2e8f0", letterSpacing:2, marginBottom:12 }}>{playerName}</div>
           <div style={{ fontSize:48, marginBottom:12 }}>🤜</div>
-          <div style={{ fontSize:12, color:"#6b7280" }}>Prépare-toi à choisir !</div>
+          <div style={{ fontSize:12, color:"#6b7280" }}>Prends le téléphone et choisis en secret !</div>
         </div>
-        <button onClick={() => launchLights(nextPhase)}
+        <button onClick={() => setPhase(nextPhase)}
           style={{ width:"100%", maxWidth:340, padding:"18px", borderRadius:18, border:"none", cursor:"pointer", background:`linear-gradient(135deg,${color},${color}cc)`, color:"#fff", fontSize:18, fontWeight:700, boxShadow:`0 0 24px ${color}50` }}>
-          🚦 JE SUIS PRÊT !
+          ✊ JE SUIS PRÊT !
         </button>
       </div>
     )
   }
-
-  // ── LIGHTS ───────────────────────────────────────────────────────────────
-  if (phase === "lights_p1" || phase === "lights_p2") return (
-    <div style={{ ...BG, gap:40 }}>
-      <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:18, color:"#6b7280", letterSpacing:3 }}>
-        {phase === "lights_p1" ? "🔴 "+me?.pseudo : "🔵 "+me?.pseudo}
-      </div>
-      <div style={{ background:"#111", borderRadius:20, padding:"24px 28px", border:"2px solid #1f2937" }}>
-        <div style={{ display:"flex", gap:14 }}>
-          {[1,2,3,4,5].map(i => (
-            <div key={i} style={{
-              width:44, height:44, borderRadius:"50%",
-              background: lights >= i ? "#ef4444" : "#1f1f1f",
-              boxShadow: lights >= i ? "0 0 18px #ef4444, 0 0 36px #ef444450" : "none",
-              border: "2px solid #374151",
-              transition: "all 0.1s",
-            }}/>
-          ))}
-        </div>
-      </div>
-      <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:14, color:"#4b5563", letterSpacing:2 }}>
-        {lights < 5 ? `${lights} / 5` : "ATTENTION…"}
-      </div>
-    </div>
-  )
 
   // ── CHOOSE ───────────────────────────────────────────────────────────────
   if (phase === "choose_p1" || phase === "choose_p2") {
@@ -441,12 +398,12 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
     const myEm = modeSelected==="local" ? (CHOICES.find(c=>c.id===p1Choice_local)?.emoji||"❓") : (CHOICES.find(c=>c.id===myChoice)?.emoji||"❓")
     const oppEm = modeSelected==="local" ? (CHOICES.find(c=>c.id===p2Choice_local)?.emoji||"❓") : (CHOICES.find(c=>c.id===opponentChoice)?.emoji||"❓")
     const oppName = modeSelected==="local" ? (members.find((m:any)=>m.user_id===targetUserId)?.pseudo||"J2") : (opponent?.pseudo || "Adversaire")
-    const displayResult = modeSelected==="local" ? (localResult==="draw"?"draw":localResult==="p1"?"win":"lose") : result
+    const displayResult = result
     return (
       <div style={BG}>
         <div style={{ textAlign:"center", marginBottom:24, width:"100%", maxWidth:340 }}>
           <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:32, letterSpacing:3, color:displayResult==="win"?"#4ade80":displayResult==="draw"?"#fbbf24":"#f87171", marginBottom:8 }}>
-            {modeSelected==="local"?(localResult==="p1"?`🏆 ${me?.pseudo} GAGNE !`:localResult==="p2"?`🏆 ${oppName} GAGNE !`:"🤝 ÉGALITÉ !"):(displayResult==="win"?"🏆 VICTOIRE !":displayResult==="draw"?"🤝 ÉGALITÉ !":"💀 DÉFAITE !")}
+            {modeSelected==="local"?(result==="win_p1"?`🏆 ${me?.pseudo} GAGNE !`:result==="win_p2"?`🏆 ${oppName} GAGNE !`:"🤝 ÉGALITÉ !"):(displayResult==="win"?"🏆 VICTOIRE !":displayResult==="draw"?"🤝 ÉGALITÉ !":"💀 DÉFAITE !")}
           </div>
           {/* Choices reveal */}
           <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:20, marginBottom:20 }}>
@@ -463,7 +420,7 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
           {/* Delta */}
           <div style={{ background:displayResult==="win"?"#052e16":displayResult==="draw"?"#1a1030":"#1c0505", border:`1px solid ${displayResult==="win"?"#166534":displayResult==="draw"?"#3b1f6a":"#7f1d1d"}`, borderRadius:14, padding:"12px 20px", marginBottom:24 }}>
             <div style={{ fontSize:14, fontWeight:700, color:result==="win"?"#4ade80":result==="draw"?"#c084fc":"#f87171" }}>
-              {displayResult==="win"?"+8m sur la piste 🏁":displayResult==="draw"?"+2m chacun 🤝":"−3m + bois un shot 🥃"}
+              {result==="draw"?"+2m chacun 🤝":result==="win"||result==="win_p1"||result==="win_p2"?"+8m / −3m 🏁":"−3m + bois un shot 🥃"}
             </div>
           </div>
         </div>
