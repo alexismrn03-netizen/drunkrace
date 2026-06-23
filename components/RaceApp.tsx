@@ -7,6 +7,7 @@ import DrunkAvatar, { type AvatarConfig, DEFAULT_AVATAR } from "./DrunkAvatar"
 import DrinkTab from "./DrinkTab"
 import PhotoTab from "./PhotoTab"
 import AvatarEditor from "./AvatarEditor"
+import DuelGame from "./DuelGame"
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 function memberDist(drinks: DrinkEntry[]) {
@@ -177,7 +178,7 @@ function RedFlagModal({ members, myId, groupId, onClose }: any) {
 }
 
 // ── RACE TRACK ───────────────────────────────────────────────────────────────
-function RaceTrack({ members, samMember, isCreator, group, events, onShowWheel, onRemoveSam, onEndRace, onRedFlag, myId }: any) {
+function RaceTrack({ members, samMember, isCreator, group, events, onShowWheel, onRemoveSam, onEndRace, onRedFlag, onDuel, myId }: any) {
   const drinkers = members.filter((m:any)=>m.user_id!==samMember?.user_id)
   const maxDist  = Math.max(...drinkers.map((m:any)=>memberDist(m.drinks)),10)
   const sorted   = [...drinkers].sort((a:any,b:any)=>memberDist(b.drinks)-memberDist(a.drinks))
@@ -227,10 +228,15 @@ function RaceTrack({ members, samMember, isCreator, group, events, onShowWheel, 
         </button>
       )}
 
-      {/* Red flag button */}
-      <button onClick={onRedFlag} style={{width:"100%",padding:"10px",marginBottom:12,borderRadius:12,border:"1px solid #7f1d1d",background:"#1c0505",cursor:"pointer",color:"#f87171",fontSize:13,fontWeight:700}}>
-        🚩 Drapeau Rouge (−5m)
-      </button>
+      {/* Actions row */}
+      <div style={{display:"flex",gap:8,marginBottom:12}}>
+        <button onClick={onRedFlag} style={{flex:1,padding:"10px",borderRadius:12,border:"1px solid #7f1d1d",background:"#1c0505",cursor:"pointer",color:"#f87171",fontSize:12,fontWeight:700}}>
+          🚩 Drapeau Rouge
+        </button>
+        <button onClick={onDuel} style={{flex:1,padding:"10px",borderRadius:12,border:"1px solid #3b1f6a",background:"#0f0f1a",cursor:"pointer",color:"#c084fc",fontSize:12,fontWeight:700}}>
+          🏎️ Duel de Shots
+        </button>
+      </div>
 
       {/* Recent events */}
       {recentEvents.length > 0 && (
@@ -507,6 +513,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
   const [events, setEvents]     = useState<any[]>([])
   const [showWheel, setShowWheel]   = useState(false)
   const [showRedFlag, setShowRedFlag] = useState(false)
+  const [showDuel, setShowDuel]       = useState(false)
   const [ended, setEnded]       = useState(group.status==="finished")
   const supabase = createClient()
 
@@ -583,6 +590,28 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
   const handleRemoveSam=async()=>{
     await supabase.from("group_members").update({is_sam:false,young_driver:false}).eq("group_id",group.id);loadMembers()
   }
+  const handleAwardDistance = async (userId: string, delta: number, drink: any) => {
+    const member = members.find((m:any) => m.user_id === userId)
+    if (!member) return
+    const currentSerialized = (member.drinks as DrinkEntry[]).map((d:DrinkEntry) => serializeDrink(d))
+    // Add the drink to their log
+    const fakeDrink: DrinkEntry = {
+      id: `duel_${Date.now()}`,
+      drinkId: drink.id,
+      name: drink.name,
+      emoji: drink.emoji,
+      vol_cl: drink.vol_cl || drink.volumes?.[0] || 4,
+      degree_pct: drink.degree_pct,
+      alcohol_g: alcoholGrams(drink.vol_cl || drink.volumes?.[0] || 4, drink.degree_pct),
+      color: drink.color,
+      addedAt: Date.now(),
+    }
+    await supabase.from("group_members").update({ drinks_log: [...currentSerialized, serializeDrink(fakeDrink)] }).eq("group_id", group.id).eq("user_id", userId)
+    // Award bonus/malus via event
+    await supabase.from("race_events").insert({ group_id: group.id, type: delta > 0 ? "duel_win" : "duel_loss", target_user_id: userId, triggered_by: user.id, distance_delta: delta > 0 ? 10 : -5 })
+    loadMembers(); loadEvents()
+  }
+
   const handleEndRace=async()=>{
     if(!confirm("Terminer la soirée pour tout le monde ?"))return
     await supabase.from("groups").update({status:"finished"}).eq("id",group.id);setEnded(true)
@@ -608,7 +637,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
 
   return (
     <div style={{background:"#0a0a14",minHeight:"100vh",maxWidth:480,margin:"0 auto",position:"relative"}}>
-      {tab==="race"    && <RaceTrack members={members} samMember={samMember} isCreator={isCreator} group={group} events={events} onShowWheel={()=>setShowWheel(true)} onRemoveSam={handleRemoveSam} onEndRace={handleEndRace} onRedFlag={()=>setShowRedFlag(true)} myId={user.id}/>}
+      {tab==="race"    && <RaceTrack members={members} samMember={samMember} isCreator={isCreator} group={group} events={events} onShowWheel={()=>setShowWheel(true)} onRemoveSam={handleRemoveSam} onEndRace={handleEndRace} onRedFlag={()=>setShowRedFlag(true)} onDuel={()=>setShowDuel(true)} myId={user.id}/>}
       {tab==="drink"   && <DrinkTab myMember={myMember} samMember={samMember} onAddDrink={handleAddDrink} onUndo={handleUndo}/>}
       {tab==="stats"   && <StatsTab myMember={myMember} members={members} samMember={samMember} events={events}/>}
       {tab==="photo"   && <PhotoTab groupId={group.id} userId={user.id}/>}
@@ -616,6 +645,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
       <TabBar active={tab} onChange={setTab}/>
       {showWheel&&<SamWheel members={members} onSamChosen={handleSamChosen} onClose={()=>setShowWheel(false)}/>}
       {showRedFlag&&<RedFlagModal members={members} myId={user.id} groupId={group.id} onClose={()=>{setShowRedFlag(false);loadEvents()}}/>}
+      {showDuel&&<DuelGame members={members} onAwardDistance={handleAwardDistance} onClose={()=>setShowDuel(false)}/>}
     </div>
   )
 }
