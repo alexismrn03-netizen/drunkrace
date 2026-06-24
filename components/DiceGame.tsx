@@ -243,39 +243,38 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
     color: COLORS[i % COLORS.length],
   }))
 
-  // Realtime for invite mode
+  // Polling for invite mode (every 2s) — no realtime to avoid race conditions
   useEffect(() => {
     if (!inviteId || mode !== "invite") return
-    const channel = supabase.channel(`dice-${inviteId}`)
-      .on("postgres_changes", { event:"UPDATE", schema:"public", table:"game_invites", filter:`id=eq.${inviteId}` }, (payload:any) => {
-        const rolls: Record<string,number> = payload.new.game_data?.rolls || {}
-        const playerIds: string[] = payload.new.game_data?.player_ids || selected
-        // NEVER override our own value from DB — only update others
-        if (myValRef.current > 0) rolls[myUserId] = myValRef.current
-        // Update display for other players only
-        setPlayerRolls(prev => {
-          const merged = { ...prev }
-          Object.keys(rolls).forEach(id => {
-            if (id !== myUserId) merged[id] = rolls[id] // only update others
-            else if (myValRef.current > 0) merged[id] = myValRef.current // keep our locked val
-          })
-          return merged
+    const poll = async () => {
+      const { data } = await supabase.from("game_invites").select("game_data").eq("id", inviteId).single()
+      if (!data) return
+      const rolls: {[key:string]:number} = data.game_data?.rolls || {}
+      const playerIds: string[] = data.game_data?.player_ids || selected
+      // Inject our locked value — never use DB value for our own roll
+      if (myValRef.current > 0) rolls[myUserId] = myValRef.current
+      // Update others display only
+      setPlayerRolls(prev => {
+        const merged = { ...prev }
+        playerIds.forEach((id:string) => {
+          if (id !== myUserId && rolls[id] != null) merged[id] = rolls[id]
+          if (id === myUserId && myValRef.current > 0) merged[id] = myValRef.current
         })
-        // Only trigger result if we have already finished our animation (myValRef set + not rolling)
-        if (!isRollingRef.current && myValRef.current > 0 && playerIds.every(id => {
-          const r = id === myUserId ? myValRef.current : rolls[id]
-          return r != null
-        })) {
-          const finalRolls: {[key:string]:number} = {}
-          playerIds.forEach((id:string) => {
-            finalRolls[id] = id === myUserId ? myValRef.current : rolls[id]
-          })
-          computeResult(finalRolls, playerIds)
-        }
+        return merged
       })
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [inviteId, mode])
+      // Only compute result when ALL have rolled AND we're done animating
+      if (!isRollingRef.current && myValRef.current > 0 &&
+          playerIds.every((id:string) => id === myUserId ? myValRef.current > 0 : rolls[id] != null)) {
+        const finalRolls: {[key:string]:number} = {}
+        playerIds.forEach((id:string) => {
+          finalRolls[id] = id === myUserId ? myValRef.current : rolls[id]
+        })
+        computeResult(finalRolls, playerIds)
+      }
+    }
+    const interval = setInterval(poll, 2000)
+    return () => clearInterval(interval)
+  }, [inviteId, mode, selected])
 
   const computeResult = (rolls: Record<string,number|null>, playerIds: string[]) => {
     // Always use myValRef for our own value if it has been set (>0)
