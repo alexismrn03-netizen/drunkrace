@@ -125,6 +125,9 @@ export function renderAvatarSVG(cfg: AvatarConfig, bac: number = 0, size: number
     switch(cfg.outfit) {
       case 0: // Casual hoodie
         return `
+                <!-- Épaules -->
+        <circle cx="22" cy="66" r="8" fill="${oc}"/>
+        <circle cx="58" cy="66" r="8" fill="${oc}"/>
         ${armL}="${oc}" transform="rotate(-8,14,76)"/>
         ${armR}="${oc}" transform="rotate(8,66,76)"/>
         <rect x="22" y="62" width="36" height="32" rx="10" fill="${oc}"/>
@@ -135,6 +138,9 @@ export function renderAvatarSVG(cfg: AvatarConfig, bac: number = 0, size: number
         ${handsL}${handsR}`
       case 1: // Smoking
         return `
+                <!-- Épaules -->
+        <circle cx="22" cy="66" r="8" fill="#1a1a1a"/>
+        <circle cx="58" cy="66" r="8" fill="#1a1a1a"/>
         ${armL}="#1a1a1a" transform="rotate(-8,14,76)"/>
         ${armR}="#1a1a1a" transform="rotate(8,66,76)"/>
         <rect x="22" y="62" width="36" height="32" rx="10" fill="#1a1a1a"/>
@@ -154,6 +160,9 @@ export function renderAvatarSVG(cfg: AvatarConfig, bac: number = 0, size: number
         ${handsL}${handsR}`
       case 2: // Maillot de bain
         return `
+        <!-- Épaules rondes pour raccorder les bras -->
+        <circle cx="22" cy="66" r="8" fill="${skin}"/>
+        <circle cx="58" cy="66" r="8" fill="${skin}"/>
         ${armL}="${skin}" transform="rotate(-8,14,76)"/>
         ${armR}="${skin}" transform="rotate(8,66,76)"/>
         <!-- Torse nu -->
@@ -172,6 +181,9 @@ export function renderAvatarSVG(cfg: AvatarConfig, bac: number = 0, size: number
         ${handsL}${handsR}`
       case 3: // Captain Morgan
         return `
+                <!-- Épaules -->
+        <circle cx="22" cy="66" r="8" fill="#8B0000"/>
+        <circle cx="58" cy="66" r="8" fill="#8B0000"/>
         ${armL}="#8B0000" transform="rotate(-8,14,76)"/>
         ${armR}="#8B0000" transform="rotate(8,66,76)"/>
         <rect x="22" y="62" width="36" height="32" rx="10" fill="#8B0000"/>
@@ -189,6 +201,9 @@ export function renderAvatarSVG(cfg: AvatarConfig, bac: number = 0, size: number
         ${handsL}${handsR}`
       case 4: // Pyjama
         return `
+                <!-- Épaules -->
+        <circle cx="22" cy="66" r="8" fill="${oc}"/>
+        <circle cx="58" cy="66" r="8" fill="${oc}"/>
         ${armL}="${oc}" transform="rotate(-8,14,76)"/>
         ${armR}="${oc}" transform="rotate(8,66,76)"/>
         <rect x="22" y="62" width="36" height="32" rx="10" fill="${oc}"/>
@@ -204,6 +219,9 @@ export function renderAvatarSVG(cfg: AvatarConfig, bac: number = 0, size: number
         ${handsL}${handsR}`
       case 5: // Sportif
         return `
+                <!-- Épaules -->
+        <circle cx="22" cy="66" r="8" fill="${oc}"/>
+        <circle cx="58" cy="66" r="8" fill="${oc}"/>
         ${armL}="${oc}" transform="rotate(-8,14,76)"/>
         ${armR}="${oc}" transform="rotate(8,66,76)"/>
         <rect x="22" y="62" width="36" height="32" rx="10" fill="${oc}"/>
@@ -218,6 +236,9 @@ export function renderAvatarSVG(cfg: AvatarConfig, bac: number = 0, size: number
         ${handsL}${handsR}`
       case 6: // F1
         return `
+                <!-- Épaules -->
+        <circle cx="22" cy="66" r="8" fill="${oc}"/>
+        <circle cx="58" cy="66" r="8" fill="${oc}"/>
         ${armL}="${oc}" transform="rotate(-8,14,76)"/>
         ${armR}="${oc}" transform="rotate(8,66,76)"/>
         <rect x="22" y="62" width="36" height="32" rx="10" fill="${oc}"/>
