@@ -266,8 +266,8 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
           const r = id === myUserId ? myValRef.current : rolls[id]
           return r != null
         })) {
-          const finalRolls: Record<string,number> = {}
-          playerIds.forEach(id => {
+          const finalRolls: {[key:string]:number} = {}
+          playerIds.forEach((id:string) => {
             finalRolls[id] = id === myUserId ? myValRef.current : rolls[id]
           })
           computeResult(finalRolls, playerIds)
