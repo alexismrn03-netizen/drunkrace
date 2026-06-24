@@ -1,6 +1,6 @@
 // Push notification utilities
 
-export const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || ''
+export const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BLWzaJFFT5F1YiPO5yb-iqps8A5Os9w7F0p4n_vyGdYtU1EqEglNKs2IDyWcfa4n7L4rl8lhHhGbN_Lip-RpEK0'
 
 // Convert VAPID key to Uint8Array
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
