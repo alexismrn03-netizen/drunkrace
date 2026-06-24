@@ -197,8 +197,8 @@ export default function MarbleRace({ members, onClose }: Props) {
         let finished: boolean=m.finished
 
         // Stun: slow down a lot
-        const stunFactor = stun>0 ? 0.2 : 1
-        const boostFactor = boosting>0 ? 1.6 : 1
+        const stunFactor = stun>0 ? 0.45 : 1
+        const boostFactor = boosting>0 ? 1.8 : 1
         stun=Math.max(0,stun-1)
         boosting=Math.max(0,boosting-1)
 
@@ -228,9 +228,9 @@ export default function MarbleRace({ members, onClose }: Props) {
           for(const ob of obstacles) {
             const dx=wx-ob.wx, dy=wy-ob.wy
             if(dx*dx+dy*dy<(ob.r+8)*(ob.r+8)) {
-              stun=ob.type==="puddle"?50:ob.type==="bump"?30:20
-              vd*=ob.type==="puddle"?0.7:0.8
-              vl=(Math.random()-.5)*3 // knock sideways
+              stun=ob.type==="puddle"?40:ob.type==="bump"?22:14
+              vd=Math.max(vd*(ob.type==="puddle"?0.75:0.85), BASE_SPD*0.4) // jamais en dessous de 40% vitesse de base
+              vl=(Math.random()-.5)*2.5 // knock sideways
               break
             }
           }
@@ -241,7 +241,7 @@ export default function MarbleRace({ members, onClose }: Props) {
           for(const bo of boosts) {
             const dx=wx-bo.wx, dy=wy-bo.wy
             if(dx*dx+dy*dy<20*20) {
-              boosting=25
+              boosting=60
               break
             }
           }
