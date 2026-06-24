@@ -347,17 +347,23 @@ export default function BeDrunkController({ groupId, myUserId, myPseudo, members
     return () => { supabase.removeChannel(sub) }
   }, [groupId])
 
-  // Countdown timer
+  // Countdown timer — tourne même pendant la prise de photo
   useEffect(() => {
-    if (!activeEvent || !showAlert) return
+    if (!activeEvent) return
+    clearInterval(timerRef.current!)
     timerRef.current = setInterval(() => {
       setSecondsLeft(s => {
-        if (s <= 1) { clearInterval(timerRef.current!); setShowAlert(false); return 0 }
+        if (s <= 1) {
+          clearInterval(timerRef.current!)
+          setShowAlert(false)
+          setShowCamera(false)
+          return 0
+        }
         return s - 1
       })
     }, 1000)
     return () => clearInterval(timerRef.current!)
-  }, [activeEvent, showAlert])
+  }, [activeEvent])
 
   const trigger = async () => {
     if (showAlert || showCamera || activeEvent) return // prevent double trigger
