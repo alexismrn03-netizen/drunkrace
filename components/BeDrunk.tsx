@@ -449,8 +449,19 @@ export default function BeDrunkController({ groupId, myUserId, myPseudo, members
       setPosted(true)
       setShowCamera(false)
       setShowAlert(false)
-      // Marquer cet event comme traité pour ne pas le re-déclencher
+      // Marquer cet event comme traité localement
       if (activeEvent) postedEventIds.current.add(activeEvent.id)
+      // Vérifier si tous les membres du groupe ont posté → passer à completed
+      const { data: allPhotos } = await supabase
+        .from("bedrunk_photos").select("user_id").eq("event_id", activeEvent.id)
+      const { data: allMembers } = await supabase
+        .from("group_members").select("user_id").eq("group_id", groupId)
+      const photoUserIds = new Set((allPhotos || []).map((p: any) => p.user_id))
+      const allPosted = (allMembers || []).every((m: any) => photoUserIds.has(m.user_id))
+      if (allPosted) {
+        // Tout le monde a posté → completed
+        await supabase.from("bedrunk_events").update({ status: "completed" }).eq("id", activeEvent.id)
+      }
       setActiveEvent(null)
     } catch(e) { console.error("BeDrunk upload failed:", e) }
   }
