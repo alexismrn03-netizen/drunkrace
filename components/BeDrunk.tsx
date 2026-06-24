@@ -393,6 +393,11 @@ export default function BeDrunkController({ groupId, myUserId, myPseudo, members
           clearInterval(timerRef.current!)
           setShowAlert(false)
           setShowCamera(false)
+          // Passer l'event à completed en DB à expiration → stop re-trigger sur tous les téléphones
+          supabase.from("bedrunk_events")
+            .update({ status: "completed" })
+            .eq("id", activeEvent!.id)
+            .then(() => {})
           return 0
         }
         return s - 1
