@@ -272,29 +272,33 @@ export function BeDrunkGallery({ groupId, myUserId }: { groupId:string; myUserId
             </div>
 
             {/* Grid */}
-            {!iPosted && phs.length > 0 && (
-              <div style={{ padding:"10px 16px 4px", fontSize:12, color:"#fbbf24",
-                display:"flex", alignItems:"center", gap:6 }}>
-                🔒 Poste ta photo pour voir celles des autres
-              </div>
-            )}
+
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr",
               gap:3, padding:3 }}>
               {phs.map(ph => (
                 <div key={ph.id} style={{ position:"relative", aspectRatio:"1",
                   overflow:"hidden", borderRadius:8 }}>
-                  <img src={ph.photo_url}
-                    style={{ width:"100%", height:"100%", objectFit:"cover",
-                      filter: iPosted ? "none" : "blur(20px)",
-                      transition:"filter 0.5s" }}
-                    alt="bedrunk"/>
-                  {!iPosted && (
-                    <div style={{ position:"absolute", inset:0, display:"flex",
-                      alignItems:"center", justifyContent:"center",
-                      background:"rgba(0,0,0,0.3)" }}>
-                      <span style={{ fontSize:28 }}>🔒</span>
-                    </div>
-                  )}
+                  {(() => {
+                    const expired = new Date(ev.expires_at) < new Date()
+                    const shouldBlur = expired && !iPosted
+                    return <>
+                      <img src={ph.photo_url}
+                        style={{ width:"100%", height:"100%", objectFit:"cover",
+                          filter: shouldBlur ? "blur(20px)" : "none",
+                          transition:"filter 0.5s" }}
+                        alt="bedrunk"/>
+                      {shouldBlur && (
+                        <div style={{ position:"absolute", inset:0, display:"flex",
+                          flexDirection:"column" as const, alignItems:"center", justifyContent:"center",
+                          background:"rgba(0,0,0,0.4)" }}>
+                          <span style={{ fontSize:28 }}>🔒</span>
+                          <span style={{ fontSize:11, color:"white", marginTop:4, textAlign:"center" as const, padding:"0 8px" }}>
+                            T'as pas posté à temps
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  })()}
                   {ph.late && (
                     <div style={{ position:"absolute", top:4, right:4,
                       background:"#ef4444", borderRadius:6, padding:"2px 6px",
