@@ -105,58 +105,58 @@ export function renderAvatarSVG(cfg: AvatarConfig, bac: number = 0): string {
   })()
 
   // ── BODY ─────────────────────────────────────────────────────────────────
-  // Proportions inspirées de l'image: torse fin, bras longs naturels, jambes longues
-  const bodyBase = (() => {
+  // Arm color depends on outfit (skin for maillot, outfit color otherwise)
+  const armColor = (cfg.outfit === 2) ? skin : oc
+  const armColorS = (cfg.outfit === 2) ? skinS : lighten(oc, -20)
+  const legColor = '#1a1a2e' // jeans by default, overridden per outfit
+  
+  const bodyBase = (armCol: string, armColS: string, legCol: string) => {
     if (isFemale) {
       return `
-        <!-- Corps femme: taille marquée, hanches -->
         <defs>
-          <linearGradient id="bodyF_${uid}" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="${skinS}"/>
-            <stop offset="40%" stop-color="${skinH}"/>
-            <stop offset="100%" stop-color="${skinS}"/>
+          <linearGradient id="armF_${uid}" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="${armColS}"/>
+            <stop offset="50%" stop-color="${armCol}"/>
+            <stop offset="100%" stop-color="${armColS}"/>
+          </linearGradient>
+          <linearGradient id="legF_${uid}" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="${lighten(legCol,-10)}"/>
+            <stop offset="50%" stop-color="${lighten(legCol,15)}"/>
+            <stop offset="100%" stop-color="${lighten(legCol,-10)}"/>
           </linearGradient>
         </defs>
-        <!-- Bras G -->
-        <path d="M26,56 Q20,70 21,86 Q21,90 25,90 Q29,90 29,86 Q28,70 30,58Z" fill="url(#bodyF_${uid})"/>
-        <!-- Bras D -->
-        <path d="M54,56 Q60,70 59,86 Q59,90 55,90 Q51,90 51,86 Q52,70 50,58Z" fill="url(#bodyF_${uid})"/>
-        <!-- Mains -->
+        <path d="M26,56 Q20,70 21,86 Q21,90 25,90 Q29,90 29,86 Q28,70 30,58Z" fill="url(#armF_${uid})"/>
+        <path d="M54,56 Q60,70 59,86 Q59,90 55,90 Q51,90 51,86 Q52,70 50,58Z" fill="url(#armF_${uid})"/>
         <circle cx="25" cy="90" r="5" fill="${skin}"/>
         <circle cx="55" cy="90" r="5" fill="${skin}"/>
-        <!-- Jambe G -->
-        <path d="M30,96 Q28,112 27,118 Q27,122 31,122 Q35,122 35,118 Q34,112 34,96Z" fill="url(#bodyF_${uid})"/>
-        <!-- Jambe D -->
-        <path d="M50,96 Q52,112 53,118 Q53,122 49,122 Q45,122 45,118 Q46,112 46,96Z" fill="url(#bodyF_${uid})"/>
-        <!-- Pieds -->
+        <path d="M30,96 Q28,112 27,118 Q27,122 31,122 Q35,122 35,118 Q34,112 34,96Z" fill="url(#legF_${uid})"/>
+        <path d="M50,96 Q52,112 53,118 Q53,122 49,122 Q45,122 45,118 Q46,112 46,96Z" fill="url(#legF_${uid})"/>
         <ellipse cx="31" cy="120" rx="8" ry="4" fill="${skinS}" transform="rotate(-5,31,120)"/>
         <ellipse cx="49" cy="120" rx="8" ry="4" fill="${skinS}" transform="rotate(5,49,120)"/>`
     } else {
       return `
-        <!-- Corps homme: épaules larges, torse droit -->
         <defs>
-          <linearGradient id="bodyM_${uid}" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="${skinS}"/>
-            <stop offset="35%" stop-color="${skinH}"/>
-            <stop offset="100%" stop-color="${skinS}"/>
+          <linearGradient id="armM_${uid}" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="${armColS}"/>
+            <stop offset="40%" stop-color="${armCol}"/>
+            <stop offset="100%" stop-color="${armColS}"/>
+          </linearGradient>
+          <linearGradient id="legM_${uid}" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="${lighten(legCol,-10)}"/>
+            <stop offset="50%" stop-color="${lighten(legCol,15)}"/>
+            <stop offset="100%" stop-color="${lighten(legCol,-10)}"/>
           </linearGradient>
         </defs>
-        <!-- Bras G -->
-        <path d="M24,54 Q17,68 17,86 Q17,91 22,91 Q27,91 27,86 Q26,70 28,56Z" fill="url(#bodyM_${uid})"/>
-        <!-- Bras D -->
-        <path d="M56,54 Q63,68 63,86 Q63,91 58,91 Q53,91 53,86 Q54,70 52,56Z" fill="url(#bodyM_${uid})"/>
-        <!-- Mains -->
+        <path d="M24,54 Q17,68 17,86 Q17,91 22,91 Q27,91 27,86 Q26,70 28,56Z" fill="url(#armM_${uid})"/>
+        <path d="M56,54 Q63,68 63,86 Q63,91 58,91 Q53,91 53,86 Q54,70 52,56Z" fill="url(#armM_${uid})"/>
         <circle cx="22" cy="90" r="5.5" fill="${skin}"/>
         <circle cx="58" cy="90" r="5.5" fill="${skin}"/>
-        <!-- Jambe G -->
-        <path d="M30,96 Q28,112 27,120 Q27,124 31,124 Q35,124 35,120 Q34,112 34,96Z" fill="url(#bodyM_${uid})"/>
-        <!-- Jambe D -->
-        <path d="M50,96 Q52,112 53,120 Q53,124 49,124 Q45,124 45,120 Q46,112 46,96Z" fill="url(#bodyM_${uid})"/>
-        <!-- Pieds -->
+        <path d="M30,96 Q28,112 27,120 Q27,124 31,124 Q35,124 35,120 Q34,112 34,96Z" fill="url(#legM_${uid})"/>
+        <path d="M50,96 Q52,112 53,120 Q53,124 49,124 Q45,124 45,120 Q46,112 46,96Z" fill="url(#legM_${uid})"/>
         <ellipse cx="31" cy="122" rx="9" ry="4.5" fill="${skinS}" transform="rotate(-5,31,122)"/>
         <ellipse cx="49" cy="122" rx="9" ry="4.5" fill="${skinS}" transform="rotate(5,49,122)"/>`
     }
-  })()
+  }
 
   // ── OUTFIT ───────────────────────────────────────────────────────────────
   const outfitSVG = (() => {
@@ -410,7 +410,22 @@ export function renderAvatarSVG(cfg: AvatarConfig, bac: number = 0): string {
     ${hairBack}
 
     <!-- Body + limbs -->
-    ${bodyBase}
+    ${bodyBase(
+      cfg.outfit === 2 ? skin : // maillot: bras nus
+      cfg.outfit === 1 && !isFemale ? '#1a1a1a' : // smoking: bras noirs
+      cfg.outfit === 3 ? '#8B0000' : // captain morgan: bras rouge foncé
+      oc, // tous les autres: couleur tenue
+      cfg.outfit === 2 ? skinS :
+      cfg.outfit === 1 && !isFemale ? '#111' :
+      cfg.outfit === 3 ? '#5a0000' :
+      lighten(oc,-20),
+      cfg.outfit === 2 ? (isFemale ? skin : oc) : // maillot: jambes nues ou short
+      cfg.outfit === 1 ? (isFemale ? oc : '#1a1a2e') : // smoking: robe ou jean
+      cfg.outfit === 3 ? '#3a0000' : // captain: pantalon sombre
+      cfg.outfit === 4 ? oc : // pyjama: même couleur
+      cfg.outfit === 6 ? oc : // F1: pantalon combinaison
+      '#1a1a2e' // jean par défaut
+    )}
 
     <!-- Outfit (over body, under head) -->
     ${outfitSVG}
