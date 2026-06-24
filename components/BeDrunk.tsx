@@ -361,9 +361,16 @@ export default function BeDrunkController({ groupId, myUserId, myPseudo, members
 
   const trigger = async () => {
     const expiresAt = new Date(Date.now() + 3 * 60 * 1000).toISOString()
-    await supabase.from("bedrunk_events").insert({
+    const { data } = await supabase.from("bedrunk_events").insert({
       group_id: groupId, expires_at: expiresAt, status:"active"
-    })
+    }).select().single()
+    // Show alert immediately for creator too
+    if (data) {
+      setActiveEvent(data)
+      setPosted(false)
+      setSecondsLeft(180)
+      setShowAlert(true)
+    }
   }
 
   const uploadPhoto = async (blob: Blob) => {
