@@ -455,32 +455,7 @@ function ProfileTab({ myMember, user, group, onUpdate, onShowGlobal }: any) {
         <DrunkAvatar config={avatarCfg} bac={0} size={100} animate={false}/>
         <div style={{display:"inline-block",background:"linear-gradient(135deg,#a855f7,#ec4899)",borderRadius:20,padding:"4px 16px",fontSize:13,fontWeight:700,color:"#fff",marginTop:8,marginBottom:10}}>{pseudo}</div>
         <br/>
-        {/* Push notifications */}
-      {"Notification" in (typeof window !== "undefined" ? window : {}) && (
-        <button onClick={async()=>{
-          const p = await (window as any).Notification?.requestPermission()
-          if(p==="granted"){
-            try {
-              const {registerPush} = await import("@/lib/pushNotifications")
-              const sub = await registerPush()
-              if(sub){
-                const res = await fetch("/api/push-subscribe",{
-                  method:"POST",headers:{"Content-Type":"application/json"},
-                  body:JSON.stringify({subscription:sub,userId:user.id})
-                })
-                if(res.ok) alert("✅ Notifications activées !")
-              }
-            } catch(e){ console.error(e) }
-          }
-        }}
-        style={{width:"100%",padding:"14px",borderRadius:14,border:"1px solid #2a2a3e",
-          cursor:"pointer",background:"#13131f",color:"#e2e8f0",fontSize:14,
-          fontWeight:700,marginBottom:10,display:"flex",alignItems:"center",
-          justifyContent:"center",gap:8}}>
-          🔔 Activer les notifications BeDrunk
-        </button>
-      )}
-      <button onClick={()=>setEditAvatar(true)} style={{background:"#13131f",border:"1px solid #3b1f6a",borderRadius:12,padding:"8px 20px",color:"#c084fc",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+        <button onClick={()=>setEditAvatar(true)} style={{background:"#13131f",border:"1px solid #3b1f6a",borderRadius:12,padding:"8px 20px",color:"#c084fc",fontSize:13,fontWeight:700,cursor:"pointer"}}>
           🎨 Personnaliser l'avatar
         </button>
       </div>
@@ -535,6 +510,41 @@ function TabBar({ active, onChange }: {active:string, onChange:(t:string)=>void}
 // ── MAIN RACE APP ─────────────────────────────────────────────────────────────
 export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate }: any) {
   const [tab, setTab]           = useState("race")
+  const [showNotifModal, setShowNotifModal] = useState(false)
+
+  // Check if we should show notif permission modal (first time only)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    if (!("Notification" in window)) return
+    if (localStorage.getItem("notif_asked")) return
+    if (Notification.permission !== "default") return
+    // Show our custom modal after 3 seconds
+    const t = setTimeout(() => setShowNotifModal(true), 3000)
+    return () => clearTimeout(t)
+  }, [])
+
+  const handleNotifAccept = async () => {
+    setShowNotifModal(false)
+    localStorage.setItem("notif_asked", "1")
+    try {
+      const { registerPush } = await import("@/lib/pushNotifications")
+      const perm = await Notification.requestPermission()
+      if (perm === "granted") {
+        const sub = await registerPush()
+        if (sub && user) {
+          await fetch("/api/push-subscribe", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ subscription: sub, userId: user.id })
+          })
+        }
+      }
+    } catch(e) { console.error(e) }
+  }
+
+  const handleNotifDecline = () => {
+    setShowNotifModal(false)
+    localStorage.setItem("notif_asked", "1")
+  }
   const [members, setMembers]   = useState<any[]>([])
   const [events, setEvents]     = useState<any[]>([])
   const [showWheel, setShowWheel]   = useState(false)
@@ -709,6 +719,36 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
       {tab==="photo"   && <PhotoTab groupId={group.id} userId={user.id}/>}
       {tab==="photos"  && <BeDrunkGallery groupId={group.id} myUserId={user.id}/>}
       {tab==="profile" && <ProfileTab myMember={myMember} user={user} group={group} onUpdate={(p:any)=>{setMembers(prev=>prev.map(m=>m.isMe?{...m,...p}:m));onProfileUpdate()}} onShowGlobal={()=>setShowGlobalProfile(true)}/>}
+      {/* Notification permission modal */}
+      {showNotifModal && (
+        <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:900,
+          display:"flex",alignItems:"center",justifyContent:"center",padding:24 }}>
+          <div style={{ background:"#13131f",borderRadius:24,padding:28,maxWidth:320,
+            border:"1px solid #2a2a3e",textAlign:"center" as const }}>
+            <div style={{ fontSize:52,marginBottom:12 }}>🔔</div>
+            <div style={{ fontFamily:"'Bebas Neue',cursive",fontSize:26,letterSpacing:2,
+              color:"#e2e8f0",marginBottom:8 }}>ACTIVER LES NOTIFS</div>
+            <div style={{ fontSize:13,color:"#9ca3af",marginBottom:6,lineHeight:1.6 }}>
+              Reçois une alerte instantanée quand un <strong style={{color:"#ec4899"}}>BeDrunk</strong> est déclenché pendant la soirée.
+            </div>
+            <div style={{ fontSize:11,color:"#6b7280",marginBottom:24 }}>
+              📸 Ne rate plus jamais le moment !
+            </div>
+            <button onClick={handleNotifAccept}
+              style={{ width:"100%",padding:"14px",borderRadius:14,border:"none",
+                cursor:"pointer",background:"linear-gradient(135deg,#ec4899,#be185d)",
+                color:"#fff",fontSize:15,fontWeight:700,marginBottom:10 }}>
+              🔔 Activer les notifications
+            </button>
+            <button onClick={handleNotifDecline}
+              style={{ width:"100%",padding:"10px",borderRadius:14,border:"none",
+                cursor:"pointer",background:"none",color:"#6b7280",fontSize:13 }}>
+              Plus tard
+            </button>
+          </div>
+        </div>
+      )}
+
       <BeDrunkController groupId={group.id} myUserId={user.id} myPseudo={myMember?.pseudo||""} members={members} isCreator={isCreator}/>
       <TabBar active={tab} onChange={setTab}/>
       {/* Incoming invite banner */}
