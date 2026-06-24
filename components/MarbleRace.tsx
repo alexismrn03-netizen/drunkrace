@@ -193,7 +193,8 @@ export default function MarbleRace({ members, onClose }: Props) {
       const next=mbsRef.current.map(m=>{
         if(m.finished) return m
 
-        let { d,lateral,vd,vl,stun,boosting,finished }=m
+        let { d,lateral,vd,vl,stun,boosting }=m
+        let finished: boolean=m.finished
 
         // Stun: slow down a lot
         const stunFactor = stun>0 ? 0.2 : 1
