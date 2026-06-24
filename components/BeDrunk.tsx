@@ -228,8 +228,10 @@ export function BeDrunkGallery({ groupId, myUserId }: { groupId:string; myUserId
       if (!phs) continue
       const mapped = phs.map((p:any) => ({ ...p, pseudo: p.profiles?.pseudo }))
       newPhotos[ev.id] = mapped
-      newMyPosted[ev.id] = phs.some((p:any) => p.user_id === myUserId) }))
+      newMyPosted[ev.id] = phs.some((p:any) => p.user_id === myUserId)
     }
+    setPhotos(newPhotos)
+    setMyPosted(newMyPosted)
   }
 
   useEffect(() => {
