@@ -218,14 +218,17 @@ export function BeDrunkGallery({ groupId, myUserId }: { groupId:string; myUserId
       .eq("group_id", groupId).order("triggered_at", { ascending: false })
     if (!evts) return
     setEvents(evts)
+    // Reset complet des photos avant reload pour éviter les données périmées
+    const newPhotos: Record<string,any[]> = {}
+    const newMyPosted: Record<string,boolean> = {}
     for (const ev of evts) {
       const { data: phs } = await supabase
         .from("bedrunk_photos").select("*, profiles(pseudo)")
         .eq("event_id", ev.id)
       if (!phs) continue
       const mapped = phs.map((p:any) => ({ ...p, pseudo: p.profiles?.pseudo }))
-      setPhotos(prev => ({ ...prev, [ev.id]: mapped }))
-      setMyPosted(prev => ({ ...prev, [ev.id]: phs.some((p:any) => p.user_id === myUserId) }))
+      newPhotos[ev.id] = mapped
+      newMyPosted[ev.id] = phs.some((p:any) => p.user_id === myUserId) }))
     }
   }
 
@@ -343,6 +346,27 @@ export default function BeDrunkController({ groupId, myUserId, myPseudo, members
   const supabase = createClient()
 
   // Poll every 4s for active BeDrunk events (plus realtime as backup)
+  // ── Enregistrer la push subscription au montage et la sauver en Supabase ──
+  useEffect(() => {
+    const setupPush = async () => {
+      try {
+        const sub = await registerPush()
+        if (!sub) return
+        const subJson = sub.toJSON()
+        // Upsert la subscription en base pour cet utilisateur
+        await supabase.from("push_subscriptions").upsert({
+          user_id: myUserId,
+          subscription: subJson,
+          updated_at: new Date().toISOString()
+        }, { onConflict: "user_id" })
+        console.log("✅ Push subscription saved")
+      } catch(e) {
+        console.error("Push setup failed:", e)
+      }
+    }
+    setupPush()
+  }, [myUserId])
+
   useEffect(() => {
     const check = async () => {
       if (activeEvent || showAlert || showCamera) return
