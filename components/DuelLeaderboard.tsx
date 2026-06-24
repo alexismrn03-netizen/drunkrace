@@ -50,9 +50,16 @@ export default function DuelLeaderboard({ onClose }: { onClose: () => void }) {
         .in("id", userIds)
       const pseudoMap: {[key:string]:string} = {}
       ;(profiles || []).forEach((p: any) => { pseudoMap[p.id] = p.pseudo })
-      setRecords(data.map((r: any) => ({
-        ...r, pseudo: pseudoMap[r.user_id] || "?"
-      })))
+      const enriched = data.map((r: any) => ({ ...r, pseudo: pseudoMap[r.user_id] || "?" }))
+      // Keep only best time per user per drink+vol
+      const bestPerUser: {[key:string]: any} = {}
+      enriched.forEach((r: any) => {
+        const key = `${r.drink_id}_${r.vol_cl}_${r.user_id}`
+        if (!bestPerUser[key] || r.time_ms < bestPerUser[key].time_ms) {
+          bestPerUser[key] = r
+        }
+      })
+      setRecords(Object.values(bestPerUser).sort((a: any, b: any) => a.time_ms - b.time_ms))
     }
     setLoading(false)
   }
