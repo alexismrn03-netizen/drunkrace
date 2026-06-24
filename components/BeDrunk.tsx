@@ -338,6 +338,8 @@ export default function BeDrunkController({ groupId, myUserId, myPseudo, members
   const [posted, setPosted] = useState(false)
   const timerRef = useRef<NodeJS.Timeout|null>(null)
   const postedEventIds = useRef<Set<string>>(new Set())
+  const [triggerLocked, setTriggerLocked] = useState(false)
+  const triggerLockTimer = useRef<NodeJS.Timeout|null>(null)
   const supabase = createClient()
 
   // Poll every 4s for active BeDrunk events (plus realtime as backup)
@@ -400,7 +402,7 @@ export default function BeDrunkController({ groupId, myUserId, myPseudo, members
   }, [activeEvent])
 
   const trigger = async () => {
-    if (showAlert || showCamera || activeEvent) return // prevent double trigger
+    if (showAlert || showCamera || activeEvent || triggerLocked) return // prevent double trigger
     const expiresAt = new Date(Date.now() + 3 * 60 * 1000).toISOString()
     // Send push to all group members
     fetch('/api/push-send', {
@@ -424,6 +426,10 @@ export default function BeDrunkController({ groupId, myUserId, myPseudo, members
     setPosted(false)
     setSecondsLeft(180)
     setShowAlert(true)
+    // Lock the trigger button for the full event duration (3min) to prevent double-trigger
+    setTriggerLocked(true)
+    clearTimeout(triggerLockTimer.current!)
+    triggerLockTimer.current = setTimeout(() => setTriggerLocked(false), 3 * 60 * 1000)
   }
 
   const uploadPhoto = async (blob: Blob) => {
@@ -454,14 +460,14 @@ export default function BeDrunkController({ groupId, myUserId, myPseudo, members
       {/* Trigger button for creator */}
       {isCreator && (
         <button onClick={trigger}
-          disabled={!!activeEvent}
+          disabled={triggerLocked}
         style={{ position:"fixed", bottom:90, right:16, zIndex:100,
-            background: activeEvent ? "#2a2a3e" : "linear-gradient(135deg,#ec4899,#be185d)",
+            background: triggerLocked ? "#2a2a3e" : "linear-gradient(135deg,#ec4899,#be185d)",
             border:"none", borderRadius:14, padding:"10px 16px",
             color:"white", fontSize:13, fontWeight:700,
-            cursor: activeEvent ? "not-allowed" : "pointer",
-            opacity: activeEvent ? 0.5 : 1,
-            boxShadow: activeEvent ? "none" : "0 4px 20px rgba(236,72,153,0.4)" }}>
+            cursor: triggerLocked ? "not-allowed" : "pointer",
+            opacity: triggerLocked ? 0.5 : 1,
+            boxShadow: triggerLocked ? "none" : "0 4px 20px rgba(236,72,153,0.4)" }}>
           📸 BeDrunk
         </button>
       )}
