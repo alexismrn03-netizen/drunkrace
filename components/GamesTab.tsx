@@ -1,6 +1,7 @@
 "use client"
 import { useState } from "react"
 import DuelGame from "./DuelGame"
+import MarbleRace from "./MarbleRace"
 import RPSGame from "./RPSGame"
 import DiceGame from "./DiceGame"
 import WheelGame from "./WheelGame"
@@ -50,6 +51,15 @@ const GAMES = [
     border: "#831843",
     bg: "#1a0516",
   },
+  {
+    id: "marble",
+    emoji: "🔮",
+    name: "Course de Billes",
+    desc: "Le gagnant distribue 10 gorgées",
+    color: "#f59e0b",
+    border: "#78350f",
+    bg: "#1a0c00",
+  },
 ]
 
 export default function GamesTab({ members, myUserId, groupId, onAwardDistance, onAwardDrink }: Props) {
@@ -80,6 +90,13 @@ export default function GamesTab({ members, myUserId, groupId, onAwardDistance, 
       onClose={() => setActiveGame(null)}
     />
   )
+  if (activeGame === "marble") return (
+    <MarbleRace
+      members={members}
+      onClose={() => setActiveGame(null)}
+    />
+  )
+
   if (activeGame === "wheel") return (
     <WheelGame
       members={members}
