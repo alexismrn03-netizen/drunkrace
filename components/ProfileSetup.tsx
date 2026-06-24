@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import { createClient } from "@/lib/supabase"
-import DrunkAvatar, { type AvatarConfig, DEFAULT_AVATAR, AVATAR_COUNT } from "@/components/DrunkAvatar"
+import DrunkAvatar, { type AvatarConfig, DEFAULT_AVATAR } from "@/components/DrunkAvatar"
 import AvatarEditor from "@/components/AvatarEditor"
 
 const S = {

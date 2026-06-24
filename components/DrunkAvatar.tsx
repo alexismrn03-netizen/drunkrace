@@ -18,6 +18,7 @@ export const DEFAULT_AVATAR: AvatarConfig = {
 
 export const SKIN_TONES   = ["#FDBCB4","#F5CBA7","#F1C27D","#C68642","#8D5524","#4A2912"]
 export const HAIR_COLORS  = ["#1a0a00","#3D2314","#6B3A2A","#B5651D","#D4A017","#E8C547","#EC4899","#a855f7"]
+export const AVATAR_COUNT = 7
 export const OUTFIT_COLORS = ["#6366f1","#ec4899","#22c55e","#ef4444","#f59e0b","#0ea5e9"]
 
 function lighten(hex: string, amt: number): string {
