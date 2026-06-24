@@ -211,25 +211,31 @@ export function BeDrunkGallery({ groupId, myUserId }: { groupId:string; myUserId
   const [myPosted, setMyPosted] = useState<Record<string, boolean>>({})
   const supabase = createClient()
 
-  useEffect(() => {
-    const load = async () => {
-      const { data: evts } = await supabase
-        .from("bedrunk_events").select("*")
-        .eq("group_id", groupId).order("triggered_at", { ascending: false })
-      if (!evts) return
-      setEvents(evts)
-
-      for (const ev of evts) {
-        const { data: phs } = await supabase
-          .from("bedrunk_photos").select("*, profiles(pseudo)")
-          .eq("event_id", ev.id)
-        if (!phs) continue
-        const mapped = phs.map((p:any) => ({ ...p, pseudo: p.profiles?.pseudo }))
-        setPhotos(prev => ({ ...prev, [ev.id]: mapped }))
-        setMyPosted(prev => ({ ...prev, [ev.id]: phs.some((p:any) => p.user_id === myUserId) }))
-      }
+  const load = async () => {
+    const { data: evts } = await supabase
+      .from("bedrunk_events").select("*")
+      .eq("group_id", groupId).order("triggered_at", { ascending: false })
+    if (!evts) return
+    setEvents(evts)
+    for (const ev of evts) {
+      const { data: phs } = await supabase
+        .from("bedrunk_photos").select("*, profiles(pseudo)")
+        .eq("event_id", ev.id)
+      if (!phs) continue
+      const mapped = phs.map((p:any) => ({ ...p, pseudo: p.profiles?.pseudo }))
+      setPhotos(prev => ({ ...prev, [ev.id]: mapped }))
+      setMyPosted(prev => ({ ...prev, [ev.id]: phs.some((p:any) => p.user_id === myUserId) }))
     }
+  }
+
+  useEffect(() => {
     load()
+    // Realtime: refresh when new events or photos arrive
+    const sub = supabase.channel(`gallery:${groupId}`)
+      .on("postgres_changes", { event:"INSERT", schema:"public", table:"bedrunk_events", filter:`group_id=eq.${groupId}` }, () => load())
+      .on("postgres_changes", { event:"INSERT", schema:"public", table:"bedrunk_photos", filter:`group_id=eq.${groupId}` }, () => load())
+      .subscribe()
+    return () => { supabase.removeChannel(sub) }
   }, [groupId, myUserId])
 
   if (events.length === 0) return (
@@ -328,14 +334,15 @@ export default function BeDrunkController({ groupId, myUserId, myPseudo, members
   const timerRef = useRef<NodeJS.Timeout|null>(null)
   const supabase = createClient()
 
-  // Listen for new BeDrunk events
+  // Listen for new BeDrunk events (for non-creator members)
   useEffect(() => {
-    const sub = supabase.channel(`bedrunk:${groupId}`)
+    const sub = supabase.channel(`bedrunk:${groupId}:${myUserId}`)
       .on("postgres_changes", {
         event:"INSERT", schema:"public", table:"bedrunk_events",
         filter:`group_id=eq.${groupId}`
       }, payload => {
         const ev = payload.new as BeDrunkEvent
+        // Don't override if creator already set it
         setActiveEvent(ev)
         setPosted(false)
         const exp = new Date(ev.expires_at).getTime()
@@ -345,7 +352,7 @@ export default function BeDrunkController({ groupId, myUserId, myPseudo, members
       })
       .subscribe()
     return () => { supabase.removeChannel(sub) }
-  }, [groupId])
+  }, [groupId, myUserId])
 
   // Countdown timer — tourne même pendant la prise de photo
   useEffect(() => {
