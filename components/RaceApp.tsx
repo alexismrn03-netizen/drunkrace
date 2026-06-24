@@ -13,6 +13,7 @@ import RPSGame from "./RPSGame"
 import DiceGame from "./DiceGame"
 import WheelGame from "./WheelGame"
 import GamesTab from "./GamesTab"
+import BeDrunkController, { BeDrunkGallery } from "./BeDrunk"
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 function memberDist(drinks: DrinkEntry[]) {
@@ -493,7 +494,7 @@ function ProfileTab({ myMember, user, group, onUpdate, onShowGlobal }: any) {
 
 // ── TAB BAR ──────────────────────────────────────────────────────────────────
 function TabBar({ active, onChange }: {active:string, onChange:(t:string)=>void}) {
-  const tabs=[{id:"race",label:"🏁 Piste"},{id:"drink",label:"🍺 Boire"},{id:"games",label:"🎮 Jeux"},{id:"stats",label:"📊 Stats"},{id:"profile",label:"👤 Profil"}]
+  const tabs=[{id:"race",label:"🏁 Piste"},{id:"drink",label:"🍺 Boire"},{id:"games",label:"🎮 Jeux"},{id:"photos",label:"📸 Photos"},{id:"stats",label:"📊 Stats"},{id:"profile",label:"👤 Profil"}]
   return (
     <div style={{display:"flex",position:"fixed",bottom:0,left:0,right:0,background:"#0a0a14",borderTop:"1px solid #1a1a2a",zIndex:1000,paddingBottom:"env(safe-area-inset-bottom, 0px)"}}>
       {tabs.map(t=>(
@@ -681,7 +682,9 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
       {tab==="games"   && <GamesTab members={members} myUserId={user.id} groupId={group.id} onAwardDistance={handleAwardSimple} onAwardDrink={handleAwardDistance}/>}
       {tab==="stats"   && <StatsTab myMember={myMember} members={members} samMember={samMember} events={events}/>}
       {tab==="photo"   && <PhotoTab groupId={group.id} userId={user.id}/>}
+      {tab==="photos"  && <BeDrunkGallery groupId={group.id} myUserId={user.id}/>}
       {tab==="profile" && <ProfileTab myMember={myMember} user={user} group={group} onUpdate={(p:any)=>{setMembers(prev=>prev.map(m=>m.isMe?{...m,...p}:m));onProfileUpdate()}} onShowGlobal={()=>setShowGlobalProfile(true)}/>}
+      <BeDrunkController groupId={group.id} myUserId={user.id} myPseudo={myMember?.pseudo||""} members={members} isCreator={isCreator}/>
       <TabBar active={tab} onChange={setTab}/>
       {/* Incoming invite banner */}
       {incomingDice && !showDice && (
