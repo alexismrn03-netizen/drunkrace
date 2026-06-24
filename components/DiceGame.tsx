@@ -457,8 +457,12 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
 
   // ── ROLLING — LOCAL ───────────────────────────────────────────────────────
   if (phase === "rolling" && mode === "local") {
-    const currentPlayer = gamePlayers[Math.min(localTurn, gamePlayers.length-1)]
+    const currentPlayer = gamePlayers[localTurn < gamePlayers.length ? localTurn : gamePlayers.length - 1]
     const allDone = gamePlayers.every(p => playerRolls[p.userId] != null)
+    // Si tous ont joué → déclencher le résultat
+    if (allDone && phase === "rolling") {
+      setTimeout(() => computeResult(playerRolls, gamePlayers.map(p => p.userId)), 100)
+    }
     const currentRoll = playerRolls[currentPlayer?.userId]
     const currentRolling = isRolling && currentRoll == null
 
