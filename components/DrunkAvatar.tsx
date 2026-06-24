@@ -116,21 +116,34 @@ export function renderAvatarSVG(cfg: AvatarConfig, bac: number = 0, size: number
   })()
 
   // ── OUTFIT ────────────────────────────────────────────────────────────────
-  // Body block: torso x22-58, y62-94; arms as ellipses; hands as circles
+  // Male: wide shoulders (cx 12/68), Female: narrower (cx 16/64), waist
   const outfitSVG = (() => {
-    const armL = `<ellipse cx="14" cy="76" rx="7" ry="14" fill`
-    const armR = `<ellipse cx="66" cy="76" rx="7" ry="14" fill`
-    const handsL = `<circle cx="14" cy="91" r="6" fill="${skin}"/>`
-    const handsR = `<circle cx="66" cy="91" r="6" fill="${skin}"/>`
+    // Male arms: wider, Female arms: slimmer
+    const armLx = isFemale ? 16 : 13
+    const armRx = isFemale ? 64 : 67
+    const armW  = isFemale ? 6 : 7
+    const armH  = isFemale ? 13 : 14
+    const armL = `<ellipse cx="${armLx}" cy="76" rx="${armW}" ry="${armH}" fill`
+    const armR = `<ellipse cx="${armRx}" cy="76" rx="${armW}" ry="${armH}" fill`
+    const handsL = `<circle cx="${armLx}" cy="${76+armH-1}" r="5" fill="${skin}"/>`
+    const handsR = `<circle cx="${armRx}" cy="${76+armH-1}" r="5" fill="${skin}"/>`
+    // Female torso: narrower + waist curve
+    const torsoF = (col: string, extra = '') => `
+      <path d="M26,62 Q22,72 24,80 Q26,88 28,94 L52,94 Q54,88 56,80 Q58,72 54,62 Z" fill="${col}"/>
+      ${extra}`
+    // Male torso: rectangular broad
+    const torsoM = (col: string, extra = '') => `
+      <rect x="22" y="62" width="36" height="32" rx="10" fill="${col}"/>
+      ${extra}`
     switch(cfg.outfit) {
       case 0: // Casual hoodie
         return `
                 <!-- Épaules -->
-        <circle cx="22" cy="66" r="8" fill="${oc}"/>
-        <circle cx="58" cy="66" r="8" fill="${oc}"/>
-        ${armL}="${oc}" transform="rotate(-8,14,76)"/>
-        ${armR}="${oc}" transform="rotate(8,66,76)"/>
-        <rect x="22" y="62" width="36" height="32" rx="10" fill="${oc}"/>
+        <circle cx="${isFemale?26:22}" cy="66" r="${isFemale?6:8}" fill="${oc}"/>
+        <circle cx="${isFemale?54:58}" cy="66" r="${isFemale?6:8}" fill="${oc}"/>
+        ${armL}="${oc}" transform="rotate(${isFemale?-5:-8},${armLx},76)"/>
+        ${armR}="${oc}" transform="rotate(${isFemale?5:8},${armRx},76)"/>
+        ${isFemale ? torsoF("${oc}") : torsoM("${oc}")}
         <!-- Capuche -->
         <path d="M26,62 Q40,54 54,62" fill="${lighten(oc,-15)}"/>
         <!-- Poche centrale -->
@@ -159,22 +172,31 @@ export function renderAvatarSVG(cfg: AvatarConfig, bac: number = 0, size: number
         <rect x="61" y="88" width="10" height="5" rx="2" fill="white"/>
         ${handsL}${handsR}`
       case 2: // Maillot de bain
-        return `
-        <!-- Épaules rondes pour raccorder les bras -->
+        return isFemale ? `
+        <!-- Bikini femme -->
+        <circle cx="26" cy="66" r="6" fill="${skin}"/>
+        <circle cx="54" cy="66" r="6" fill="${skin}"/>
+        ${armL}="${skin}" transform="rotate(-5,${armLx},76)"/>
+        ${armR}="${skin}" transform="rotate(5,${armRx},76)"/>
+        ${torsoF(skin)}
+        <!-- Bikini haut -->
+        <path d="M29,66 Q34,60 40,63 Q46,60 51,66 Q46,73 40,70 Q34,73 29,66Z" fill="${oc}"/>
+        <!-- Bikini bas -->
+        <path d="M28,80 Q26,88 28,94 L52,94 Q54,88 52,80 Q46,76 40,77 Q34,76 28,80Z" fill="${oc}"/>
+        <!-- Nœuds bikini -->
+        <circle cx="29" cy="66" r="2.5" fill="${lighten(oc,20)}"/>
+        <circle cx="51" cy="66" r="2.5" fill="${lighten(oc,20)}"/>
+        ${handsL}${handsR}
+        ` : `
+        <!-- Maillot homme -->
         <circle cx="22" cy="66" r="8" fill="${skin}"/>
         <circle cx="58" cy="66" r="8" fill="${skin}"/>
-        ${armL}="${skin}" transform="rotate(-8,14,76)"/>
-        ${armR}="${skin}" transform="rotate(8,66,76)"/>
-        <!-- Torse nu -->
+        ${armL}="${skin}" transform="rotate(-8,${armLx},76)"/>
+        ${armR}="${skin}" transform="rotate(8,${armRx},76)"/>
         <rect x="22" y="62" width="36" height="18" rx="8" fill="${skin}"/>
-        <!-- Tétons si homme -->
-        ${!isFemale ? `<circle cx="33" cy="72" r="2" fill="${sd}" opacity="0.5"/>
-        <circle cx="47" cy="72" r="2" fill="${sd}" opacity="0.5"/>` : ''}
-        <!-- Bikini haut si femme -->
-        ${isFemale ? `<path d="M27,68 Q33,62 40,66 Q47,62 53,68 Q47,76 40,72 Q33,76 27,68Z" fill="${oc}"/>` : ''}
-        <!-- Maillot/Short -->
+        <circle cx="33" cy="72" r="2" fill="${sd}" opacity="0.4"/>
+        <circle cx="47" cy="72" r="2" fill="${sd}" opacity="0.4"/>
         <rect x="24" y="80" width="32" height="14" rx="8" fill="${oc}"/>
-        <!-- Motifs -->
         <line x1="30" y1="80" x2="30" y2="94" stroke="${lighten(oc,20)}" stroke-width="2" opacity="0.5"/>
         <line x1="40" y1="80" x2="40" y2="94" stroke="${lighten(oc,20)}" stroke-width="2" opacity="0.5"/>
         <line x1="50" y1="80" x2="50" y2="94" stroke="${lighten(oc,20)}" stroke-width="2" opacity="0.5"/>
@@ -182,10 +204,10 @@ export function renderAvatarSVG(cfg: AvatarConfig, bac: number = 0, size: number
       case 3: // Captain Morgan
         return `
                 <!-- Épaules -->
-        <circle cx="22" cy="66" r="8" fill="#8B0000"/>
-        <circle cx="58" cy="66" r="8" fill="#8B0000"/>
-        ${armL}="#8B0000" transform="rotate(-8,14,76)"/>
-        ${armR}="#8B0000" transform="rotate(8,66,76)"/>
+        <circle cx="${isFemale?26:22}" cy="66" r="${isFemale?6:8}" fill="#8B0000"/>
+        <circle cx="${isFemale?54:58}" cy="66" r="${isFemale?6:8}" fill="#8B0000"/>
+        ${armL}="#8B0000" transform="rotate(${isFemale?-5:-8},${armLx},76)"/>
+        ${armR}="#8B0000" transform="rotate(${isFemale?5:8},${armRx},76)"/>
         <rect x="22" y="62" width="36" height="32" rx="10" fill="#8B0000"/>
         <!-- Veste avec bordure or -->
         <rect x="22" y="62" width="36" height="4" rx="2" fill="#D4AF37"/>
@@ -202,11 +224,11 @@ export function renderAvatarSVG(cfg: AvatarConfig, bac: number = 0, size: number
       case 4: // Pyjama
         return `
                 <!-- Épaules -->
-        <circle cx="22" cy="66" r="8" fill="${oc}"/>
-        <circle cx="58" cy="66" r="8" fill="${oc}"/>
-        ${armL}="${oc}" transform="rotate(-8,14,76)"/>
-        ${armR}="${oc}" transform="rotate(8,66,76)"/>
-        <rect x="22" y="62" width="36" height="32" rx="10" fill="${oc}"/>
+        <circle cx="${isFemale?26:22}" cy="66" r="${isFemale?6:8}" fill="${oc}"/>
+        <circle cx="${isFemale?54:58}" cy="66" r="${isFemale?6:8}" fill="${oc}"/>
+        ${armL}="${oc}" transform="rotate(${isFemale?-5:-8},${armLx},76)"/>
+        ${armR}="${oc}" transform="rotate(${isFemale?5:8},${armRx},76)"/>
+        ${isFemale ? torsoF("${oc}") : torsoM("${oc}")}
         <!-- Rayures pyjama -->
         <rect x="27" y="62" width="5" height="32" rx="2" fill="${lighten(oc,-30)}" opacity="0.4"/>
         <rect x="38" y="62" width="5" height="32" rx="2" fill="${lighten(oc,-30)}" opacity="0.4"/>
@@ -220,11 +242,11 @@ export function renderAvatarSVG(cfg: AvatarConfig, bac: number = 0, size: number
       case 5: // Sportif
         return `
                 <!-- Épaules -->
-        <circle cx="22" cy="66" r="8" fill="${oc}"/>
-        <circle cx="58" cy="66" r="8" fill="${oc}"/>
-        ${armL}="${oc}" transform="rotate(-8,14,76)"/>
-        ${armR}="${oc}" transform="rotate(8,66,76)"/>
-        <rect x="22" y="62" width="36" height="32" rx="10" fill="${oc}"/>
+        <circle cx="${isFemale?26:22}" cy="66" r="${isFemale?6:8}" fill="${oc}"/>
+        <circle cx="${isFemale?54:58}" cy="66" r="${isFemale?6:8}" fill="${oc}"/>
+        ${armL}="${oc}" transform="rotate(${isFemale?-5:-8},${armLx},76)"/>
+        ${armR}="${oc}" transform="rotate(${isFemale?5:8},${armRx},76)"/>
+        ${isFemale ? torsoF("${oc}") : torsoM("${oc}")}
         <!-- Bandes latérales -->
         <rect x="22" y="62" width="8" height="32" rx="5" fill="white" opacity="0.25"/>
         <rect x="50" y="62" width="8" height="32" rx="5" fill="white" opacity="0.25"/>
@@ -237,11 +259,11 @@ export function renderAvatarSVG(cfg: AvatarConfig, bac: number = 0, size: number
       case 6: // F1
         return `
                 <!-- Épaules -->
-        <circle cx="22" cy="66" r="8" fill="${oc}"/>
-        <circle cx="58" cy="66" r="8" fill="${oc}"/>
-        ${armL}="${oc}" transform="rotate(-8,14,76)"/>
-        ${armR}="${oc}" transform="rotate(8,66,76)"/>
-        <rect x="22" y="62" width="36" height="32" rx="10" fill="${oc}"/>
+        <circle cx="${isFemale?26:22}" cy="66" r="${isFemale?6:8}" fill="${oc}"/>
+        <circle cx="${isFemale?54:58}" cy="66" r="${isFemale?6:8}" fill="${oc}"/>
+        ${armL}="${oc}" transform="rotate(${isFemale?-5:-8},${armLx},76)"/>
+        ${armR}="${oc}" transform="rotate(${isFemale?5:8},${armRx},76)"/>
+        ${isFemale ? torsoF("${oc}") : torsoM("${oc}")}
         <!-- Combinaison F1 -->
         <rect x="22" y="62" width="36" height="5" rx="3" fill="${lighten(oc,20)}"/>
         <rect x="22" y="89" width="36" height="5" rx="3" fill="${lighten(oc,20)}"/>
