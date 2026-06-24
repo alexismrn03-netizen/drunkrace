@@ -1,186 +1,171 @@
 "use client"
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef } from "react"
 
-interface Player { id: number; name: string; color: string }
-interface Marble {
-  id: number; name: string; color: string
-  x: number; y: number
-  vx: number; vy: number
-  progress: number
-  finished: boolean; rank: number | null
-  stunned: number // frames stunned by obstacle
-}
+const COLORS = ["#ef4444","#3b82f6","#22c55e","#f59e0b","#a855f7","#ec4899"]
 
-interface Obstacle { x: number; y: number; r: number; type: "cone"|"puddle"|"bump" }
-
-const PLAYER_COLORS = ["#ef4444","#3b82f6","#22c55e","#f59e0b","#a855f7","#ec4899"]
-
-// Full F1-style circuit: array of [x,y] waypoints in world coords (pixels)
-// The track is 3000px long, camera follows
-const TRACK_W = 3200
-const TRACK_H = 1400
-
-// Waypoints forming an oval-ish circuit with chicanes
-const WAYPOINTS: [number,number][] = [
-  [300,700],[500,700],[700,700],[900,680],[1100,640],[1250,580],[1350,480],[1380,360],
-  [1360,240],[1280,160],[1160,120],[1020,110],[880,120],[760,160],[680,240],[660,360],
-  [680,460],[740,540],[840,580],[960,600],[1080,600],[1200,600],[1360,600],[1500,600],
-  [1640,580],[1760,520],[1840,420],[1860,300],[1820,180],[1720,100],[1580,70],[1420,70],
-  [1260,90],[1140,150],[1080,240],[1080,360],[1120,460],[1200,540],[1320,580],
-  [1480,600],[1640,620],[1800,640],[1960,660],[2100,680],[2240,720],[2360,780],
-  [2440,860],[2480,960],[2460,1060],[2380,1140],[2260,1180],[2120,1180],[1980,1160],
-  [1840,1120],[1720,1060],[1640,980],[1600,880],[1580,780],[1560,700],[1520,660],
-  [1460,640],[1380,640],[1260,640],[1140,640],[1020,660],[900,700],[780,760],
-  [700,840],[660,940],[660,1060],[700,1160],[780,1220],[900,1240],[1040,1230],
-  [1160,1200],[1240,1140],[1280,1060],[1260,960],[1200,880],[1100,830],[980,820],
-  [860,830],[760,870],[700,940],[680,1040],[700,1140],[760,1200],[860,1230],
-  [1000,1220],[1120,1180],[1200,1100],[1220,1000],[1200,900],[1140,820],[1060,780],
-  [960,780],[860,800],[780,850],[740,940],[740,1020],[780,1100],[850,1160],
-  [940,1180],[1040,1160],[1120,1100],[1160,1020],[1140,940],[1100,880],[1020,860],
-  [940,870],[880,910],[860,970],[880,1040],[930,1090],[1000,1100],[1060,1070],
-  [1100,1010],[1080,950],[1040,910],[980,910],[940,940],[940,990],[970,1030],
-  [1010,1040],[1050,1020],[1060,980],[1040,950],[1010,940],[980,950],[970,980],
-  // Back to start
-  [800,900],[640,900],[480,860],[360,800],[280,720],[270,700],[280,700],[300,700],
+// ── TRACK ─────────────────────────────────────────────────────────────────
+// Simple oval circuit with chicanes — waypoints in world coords
+// We'll render only a viewport around the camera
+const TRACK_PTS: [number,number][] = [
+  // Start straight
+  [400,700],[500,700],[600,700],[700,700],[800,700],[900,700],[1000,700],[1100,700],[1200,700],
+  // Turn 1 (right)
+  [1300,680],[1380,640],[1430,580],[1450,500],[1440,420],[1400,360],[1340,310],[1270,290],[1200,290],
+  // Chicane
+  [1130,300],[1060,330],[1010,380],[990,440],[1010,500],[1060,540],[1120,550],[1180,540],
+  [1240,510],[1280,460],[1280,400],[1250,350],[1200,320],
+  // Back straight
+  [1100,310],[1000,310],[900,310],[800,310],[700,310],[600,310],[500,310],
+  // Turn 2 (left hairpin)
+  [420,320],[350,360],[310,420],[310,490],[340,560],[400,610],[470,640],[550,660],
+  // Inner loop
+  [620,670],[680,660],[730,630],[760,580],[760,520],[730,470],[680,440],[620,430],
+  [560,440],[510,470],[490,520],[500,570],[530,610],[570,640],
+  // Return to start
+  [620,660],[680,680],[750,690],[820,695],[900,698],[1000,699],[1100,700],
 ]
 
-const TRACK_WIDTH = 80 // road width in world px
+const TRACK_LEN = TRACK_PTS.length
+const ROAD_W = 70  // road width in world px
+const VIEW_W = 360
+const VIEW_H = 320
 
-// Precompute cumulative distances
-function buildSpline(pts: [number,number][]) {
-  const dists = [0]
-  for (let i = 1; i < pts.length; i++) {
-    const dx = pts[i][0] - pts[i-1][0]
-    const dy = pts[i][1] - pts[i-1][1]
-    dists.push(dists[i-1] + Math.sqrt(dx*dx + dy*dy))
+// Precompute cumulative arc lengths for smooth interpolation
+function buildTrack() {
+  const segs: number[] = [0]
+  for (let i = 1; i < TRACK_PTS.length; i++) {
+    const dx = TRACK_PTS[i][0] - TRACK_PTS[i-1][0]
+    const dy = TRACK_PTS[i][1] - TRACK_PTS[i-1][1]
+    segs.push(segs[i-1] + Math.sqrt(dx*dx + dy*dy))
   }
-  return { pts, dists, total: dists[dists.length-1] }
+  return { segs, total: segs[segs.length-1] }
 }
 
-function posAtDist(spline: ReturnType<typeof buildSpline>, d: number): [number,number] {
-  const t = ((d % spline.total) + spline.total) % spline.total
-  for (let i = 1; i < spline.dists.length; i++) {
-    if (spline.dists[i] >= t) {
-      const seg = spline.dists[i] - spline.dists[i-1]
-      const frac = seg > 0 ? (t - spline.dists[i-1]) / seg : 0
-      const [ax,ay] = spline.pts[i-1]
-      const [bx,by] = spline.pts[i]
-      return [ax + (bx-ax)*frac, ay + (by-ay)*frac]
+function posAtT(track: ReturnType<typeof buildTrack>, t: number): [number,number] {
+  // t is 0..1, mapped to arc length
+  const d = ((t % 1) + 1) % 1 * track.total
+  for (let i = 1; i < track.segs.length; i++) {
+    if (track.segs[i] >= d) {
+      const prev = track.segs[i-1]
+      const seg = track.segs[i] - prev
+      const f = seg > 0 ? (d - prev) / seg : 0
+      const [ax,ay] = TRACK_PTS[i-1]
+      const [bx,by] = TRACK_PTS[i]
+      return [ax+(bx-ax)*f, ay+(by-ay)*f]
     }
   }
-  return spline.pts[spline.pts.length-1]
+  return TRACK_PTS[TRACK_PTS.length-1]
 }
 
-// Generate random obstacles along the track
-function genObstacles(spline: ReturnType<typeof buildSpline>): Obstacle[] {
-  const obs: Obstacle[] = []
-  const types: ("cone"|"puddle"|"bump")[] = ["cone","puddle","bump"]
-  for (let d = 400; d < spline.total - 300; d += 180 + Math.random()*120) {
-    const [px,py] = posAtDist(spline, d)
-    const offset = (Math.random() - 0.5) * TRACK_WIDTH * 0.5
-    // Get tangent for perpendicular offset
-    const [nx,ny] = posAtDist(spline, d + 5)
-    const tx = nx - px, ty = ny - py
-    const len = Math.sqrt(tx*tx + ty*ty) || 1
-    obs.push({
-      x: px + (-ty/len)*offset,
-      y: py + (tx/len)*offset,
-      r: 12 + Math.random()*8,
-      type: types[Math.floor(Math.random()*3)]
-    })
-  }
-  return obs
+// Obstacle positions (static, placed along track offset from center)
+const OBSTACLES = [
+  { d: 0.08, off: 18,  r: 10, type: "cone"   },
+  { d: 0.15, off: -20, r: 14, type: "puddle"  },
+  { d: 0.23, off: 12,  r: 11, type: "bump"    },
+  { d: 0.31, off: -15, r: 10, type: "cone"    },
+  { d: 0.40, off: 20,  r: 13, type: "puddle"  },
+  { d: 0.48, off: -10, r: 12, type: "bump"    },
+  { d: 0.56, off: 18,  r: 10, type: "cone"    },
+  { d: 0.64, off: -22, r: 14, type: "puddle"  },
+  { d: 0.72, off: 10,  r: 11, type: "bump"    },
+  { d: 0.80, off: -18, r: 10, type: "cone"    },
+  { d: 0.88, off: 16,  r: 13, type: "puddle"  },
+  { d: 0.93, off: -12, r: 12, type: "bump"    },
+]
+
+// World position of obstacle
+function obsPos(track: ReturnType<typeof buildTrack>, d: number, off: number): [number,number] {
+  const [px,py] = posAtT(track, d)
+  const d2 = d + 0.001
+  const [nx,ny] = posAtT(track, d2)
+  const tx = nx-px, ty = ny-py
+  const len = Math.sqrt(tx*tx+ty*ty) || 1
+  return [px + (-ty/len)*off, py + (tx/len)*off]
 }
 
 function F1Lights({ phase }: { phase: string }) {
-  const lit = ["lights1","lights2","lights3","lights4","lights5","go"].indexOf(phase)
-  const isGo = phase === "go"
+  const n = phase==="lights1"?1:phase==="lights2"?2:phase==="lights3"?3:phase==="lights4"?4:phase==="lights5"||phase==="go"?5:0
+  const go = phase === "go"
   return (
-    <div style={{ display:"flex", flexDirection:"column" as const, alignItems:"center", gap:6,
-      background:"#111", borderRadius:12, padding:"10px 16px",
+    <div style={{ display:"flex", flexDirection:"column" as const, alignItems:"center", gap:4,
+      background:"#111", borderRadius:12, padding:"8px 14px",
       border:"2px solid #333", boxShadow:"0 4px 20px rgba(0,0,0,0.8)" }}>
-      <div style={{ display:"flex", gap:10 }}>
-        {[0,1,2,3,4].map(i => (
+      <div style={{ display:"flex", gap:8 }}>
+        {[1,2,3,4,5].map(i => (
           <div key={i} style={{
-            width:22, height:22, borderRadius:"50%",
-            background: isGo ? "#111" : lit > i ? "#ef4444" : "#1a1a1a",
-            boxShadow: isGo ? "none" : lit > i ? "0 0 14px #ef4444, 0 0 28px #ef444440" : "none",
+            width:20, height:20, borderRadius:"50%",
+            background: go ? "#111" : n>=i ? "#ef4444" : "#1a1a1a",
+            boxShadow: go ? "none" : n>=i ? "0 0 12px #ef4444,0 0 24px #ef444440" : "none",
             border:"2px solid #333", transition:"all 0.08s"
           }}/>
         ))}
       </div>
-      {isGo && <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:22, color:"#22c55e",
-        letterSpacing:4, textShadow:"0 0 16px #22c55e" }}>GO !</div>}
+      {go && <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:20, color:"#22c55e",
+        letterSpacing:4, textShadow:"0 0 14px #22c55e" }}>GO !</div>}
     </div>
   )
 }
 
-interface Props {
-  members: any[]
-  onClose: () => void
-}
+interface Props { members: any[]; onClose: () => void }
 
 export default function MarbleRace({ members, onClose }: Props) {
   const [numPlayers, setNumPlayers] = useState(Math.min(members.length, 4))
   const [phase, setPhase] = useState<"setup"|"countdown"|"racing"|"finished">("setup")
   const [lightPhase, setLightPhase] = useState("waiting")
-  const [marbles, setMarbles] = useState<Marble[]>([])
-  const [winner, setWinner] = useState<Marble|null>(null)
-  const [camera, setCamera] = useState({x:0, y:700}) // world pos at center of view
-  const [distributing, setDistributing] = useState(false)
-  const [sipTarget, setSipTarget] = useState<number|null>(null)
+
+  // Marble state: t=progress 0..1, speed multiplier, stun frames
+  type MB = { id:number; name:string; color:string; t:number; spd:number; stun:number; wx:number; wy:number; laneOff:number }
+  const [mbs, setMbs] = useState<MB[]>([])
+  const mbsRef = useRef<MB[]>([])
+
+  // Camera in world coords (smooth lerp)
+  const [cam, setCam] = useState<[number,number]>([600,700])
+  const camRef = useRef<[number,number]>([600,700])
+
+  const trackRef = useRef(buildTrack())
+  const animRef = useRef(0)
+  const winnerRef = useRef<MB|null>(null)
+  const [winner, setWinner] = useState<MB|null>(null)
+  const [gorges, setGorges] = useState<Record<number,number>>({})
   const [gorgesLeft, setGorgesLeft] = useState(10)
-  const [distribution, setDistribution] = useState<Record<number,number>>({})
 
-  const splineRef = useRef<ReturnType<typeof buildSpline> | null>(null)
-  const obstaclesRef = useRef<Obstacle[]>([])
-  const animRef = useRef<number>(0)
-  const startRef = useRef(0)
-  const marblesRef = useRef<Marble[]>([])
-  const winnerSetRef = useRef(false)
-  const speedsRef = useRef<number[]>([])
+  const RACE_DUR = 20 // seconds
+  const BASE_SPEED = 1 / (RACE_DUR * 60) // progress per frame at 60fps
 
-  const RACE_DURATION = 18000
-  const VIEW_W = 360, VIEW_H = 340
-
-  const players = members.slice(0, numPlayers).map((m, i) => ({
-    id: i, name: m.pseudo || `J${i+1}`, color: PLAYER_COLORS[i]
+  const players = members.slice(0, numPlayers).map((m,i) => ({
+    id: i, name: m.pseudo||`J${i+1}`, color: COLORS[i]
   }))
 
-  useEffect(() => {
-    const sp = buildSpline(WAYPOINTS)
-    splineRef.current = sp
-    obstaclesRef.current = genObstacles(sp)
-  }, [])
-
   const startRace = () => {
-    const sp = splineRef.current!
-    winnerSetRef.current = false
-    // Random speeds, one winner pre-chosen
-    const winIdx = Math.floor(Math.random() * numPlayers)
-    const speeds = players.map((_, i) => {
-      const base = 0.82 + Math.random() * 0.12
-      return i === winIdx ? base + 0.18 + Math.random() * 0.08 : base
-    })
-    speedsRef.current = speeds
-
-    const initMarbles: Marble[] = players.map((p, i) => {
-      const offset = (i - (numPlayers-1)/2) * 22
-      const [px, py] = posAtDist(sp, offset + 20)
-      return { ...p, x: px, y: py + offset, vx:0, vy:0, progress:0, finished:false, rank:null, stunned:0 }
-    })
-    marblesRef.current = initMarbles
-    setMarbles(initMarbles)
+    const track = trackRef.current
+    winnerRef.current = null
     setWinner(null)
-    setSipTarget(null)
+    setGorges({})
     setGorgesLeft(10)
-    setDistribution({})
-    setDistributing(false)
-    setCamera({ x: WAYPOINTS[0][0], y: WAYPOINTS[0][1] })
+
+    // Pick winner (gets +20% speed)
+    const winIdx = Math.floor(Math.random() * numPlayers)
+
+    const initMbs: MB[] = players.map((p,i) => {
+      const laneOff = (i - (numPlayers-1)/2) * 14 // spread across lane
+      const [wx,wy] = posAtT(track, 0)
+      return {
+        ...p,
+        t: 0,
+        spd: (0.88 + Math.random()*0.08) * (i===winIdx ? 1.22 : 1),
+        stun: 0,
+        wx, wy,
+        laneOff,
+      }
+    })
+    mbsRef.current = initMbs
+    setMbs(initMbs)
+    camRef.current = [initMbs[0].wx, initMbs[0].wy]
+    setCam([initMbs[0].wx, initMbs[0].wy])
+
     setPhase("countdown")
     setLightPhase("waiting")
 
-    // Lights sequence
     let step = 0
     const PHASES = ["lights1","lights2","lights3","lights4","lights5"]
     const iv = setInterval(() => {
@@ -192,140 +177,143 @@ export default function MarbleRace({ members, onClose }: Props) {
           setTimeout(() => {
             setLightPhase("racing")
             setPhase("racing")
-            startRef.current = performance.now()
-          }, 500 + Math.random() * 500)
+          }, 400 + Math.random()*500)
         }, 200)
       }
     }, 620)
   }
 
-  // Race loop
+  // ── RACE LOOP ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (phase !== "racing") return
-    const sp = splineRef.current!
-    const obs = obstaclesRef.current
-    let finishCount = 0
+    const track = trackRef.current
 
-    const tick = (now: number) => {
-      const elapsed = now - startRef.current
-      const globalT = Math.min(elapsed / RACE_DURATION, 1)
+    // Precompute obstacle world positions
+    const obsPts = OBSTACLES.map(ob => ({
+      ...ob,
+      pos: obsPos(track, ob.d, ob.off)
+    }))
 
-      // Easing: slow start, full speed, slow end
-      const eased = globalT < 0.08
-        ? globalT * globalT * 80
-        : globalT < 0.92
-        ? 0.512 + (globalT - 0.08) * 1.07
-        : 0.95 + (globalT - 0.92) * 0.625
+    let frame = 0
 
-      const next = marblesRef.current.map((m, i) => {
-        if (m.finished) return m
-        const spd = speedsRef.current[i]
-        const prog = Math.min(eased * spd, 0.999)
-        const dist = prog * sp.total
-        const [nx, ny] = posAtDist(sp, dist)
+    const tick = () => {
+      frame++
 
-        // Check obstacle collisions
-        let stunned = Math.max(0, m.stunned - 1)
-        if (stunned === 0) {
-          for (const ob of obs) {
-            const dx = nx - ob.x, dy = ny - ob.y
-            if (dx*dx + dy*dy < (ob.r + 8) * (ob.r + 8)) {
-              stunned = ob.type === "puddle" ? 40 : ob.type === "bump" ? 20 : 12
-              speedsRef.current[i] *= ob.type === "puddle" ? 0.88 : 0.92
+      const next = mbsRef.current.map(m => {
+        if (m.t >= 1) return m
+
+        // Speed: BASE_SPEED * personal multiplier, slowed if stunned
+        const stun = Math.max(0, m.stun - 1)
+        const speedFactor = stun > 0 ? 0.25 : 1
+        const newT = Math.min(m.t + BASE_SPEED * m.spd * speedFactor, 1)
+
+        // World position along track center + lane offset
+        const [cx,cy] = posAtT(track, newT)
+        // Perpendicular offset for lane
+        const ahead = posAtT(track, newT + 0.002)
+        const tx = ahead[0]-cx, ty = ahead[1]-cy
+        const len = Math.sqrt(tx*tx+ty*ty)||1
+        const wx = cx + (-ty/len) * m.laneOff
+        const wy = cy + (tx/len)  * m.laneOff
+
+        // Check obstacles
+        let newStun = stun
+        let newSpd = m.spd
+        if (stun === 0) {
+          for (const ob of obsPts) {
+            const dx = wx - ob.pos[0], dy = wy - ob.pos[1]
+            if (dx*dx + dy*dy < (ob.r+7)*(ob.r+7)) {
+              newStun = ob.type==="puddle" ? 45 : ob.type==="bump" ? 25 : 15
+              newSpd = m.spd * (ob.type==="puddle" ? 0.93 : 0.97)
               break
             }
           }
         }
 
-        const finished = prog >= 0.995
-        if (finished && !m.finished) {
-          finishCount++
-          if (!winnerSetRef.current) {
-            winnerSetRef.current = true
-            setWinner({ ...m, x: nx, y: ny, progress: prog, finished: true, rank: 1, stunned })
-          }
-        }
-
-        return { ...m, x: nx, y: ny, progress: prog, finished, stunned,
-          rank: finished ? (m.rank ?? finishCount) : null }
+        return { ...m, t: newT, wx, wy, stun: newStun, spd: newSpd }
       })
 
-      marblesRef.current = next
-      setMarbles([...next])
-
-      // Camera: follow centroid of all marbles
-      const cx = next.reduce((s,m)=>s+m.x,0)/next.length
-      const cy = next.reduce((s,m)=>s+m.y,0)/next.length
-      setCamera({ x: cx, y: cy })
-
-      const allDone = globalT >= 1 || next.every(m => m.finished)
-      if (!allDone) {
-        animRef.current = requestAnimationFrame(tick)
-      } else {
-        setPhase("finished")
-        setDistributing(true)
+      // Check winner
+      if (!winnerRef.current) {
+        const w = next.find(m => m.t >= 1)
+        if (w) {
+          winnerRef.current = w
+          setWinner(w)
+          // Let race finish naturally for 3 more secs then end
+          setTimeout(() => setPhase("finished"), 3000)
+        }
       }
+
+      mbsRef.current = next
+      setMbs([...next])
+
+      // Smooth camera: lerp toward centroid of all marbles
+      const cx = next.reduce((s,m)=>s+m.wx,0)/next.length
+      const cy = next.reduce((s,m)=>s+m.wy,0)/next.length
+      const [pcx,pcy] = camRef.current
+      const ncx = pcx + (cx-pcx)*0.04 // smooth follow
+      const ncy = pcy + (cy-pcy)*0.04
+      camRef.current = [ncx, ncy]
+      if (frame % 2 === 0) setCam([ncx, ncy]) // update every 2 frames for perf
+
+      if (phase === "racing") animRef.current = requestAnimationFrame(tick)
     }
 
     animRef.current = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(animRef.current)
   }, [phase])
 
-  const addSip = (targetId: number) => {
+  const addSip = (id: number) => {
     if (gorgesLeft <= 0) return
-    setDistribution(prev => ({ ...prev, [targetId]: (prev[targetId]||0) + 1 }))
-    setGorgesLeft(g => g - 1)
+    setGorges(g => ({...g, [id]:(g[id]||0)+1}))
+    setGorgesLeft(l => l-1)
   }
-  const removeSip = (targetId: number) => {
-    setDistribution(prev => {
-      const cur = prev[targetId] || 0
-      if (cur <= 0) return prev
-      setGorgesLeft(g => g + 1)
-      return { ...prev, [targetId]: cur - 1 }
+  const remSip = (id: number) => {
+    setGorges(g => {
+      if ((g[id]||0) <= 0) return g
+      setGorgesLeft(l => l+1)
+      return {...g, [id]:(g[id]||1)-1}
     })
   }
 
   const BG: any = { position:"fixed", inset:0, background:"#0a0a14", zIndex:400,
-    display:"flex", flexDirection:"column", alignItems:"center", overflowY:"auto" }
+    display:"flex", flexDirection:"column", alignItems:"center" }
 
-  // ── SETUP ───────────────────────────────────────────────────────────────
+  // ── SETUP ────────────────────────────────────────────────────────────────
   if (phase === "setup") return (
-    <div style={BG}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap')`}</style>
+    <div style={{...BG, overflowY:"auto"}}>
       <div style={{ width:"100%", maxWidth:380, padding:"24px 16px 60px" }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
-          <h2 style={{ fontFamily:"'Bebas Neue',cursive", fontSize:28, letterSpacing:3,
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+          <h2 style={{ fontFamily:"'Bebas Neue',cursive", fontSize:26, letterSpacing:3,
             background:"linear-gradient(135deg,#ef4444,#f59e0b)", WebkitBackgroundClip:"text",
             WebkitTextFillColor:"transparent", margin:0 }}>🔮 COURSE DE BILLES</h2>
           <button onClick={onClose} style={{ background:"none", border:"none", color:"#6b7280", fontSize:22, cursor:"pointer" }}>✕</button>
         </div>
 
-        <div style={{ background:"#13131f", borderRadius:14, padding:14, border:"1px solid #2a2a3e", marginBottom:16 }}>
-          <div style={{ fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:1, textTransform:"uppercase" as const, marginBottom:12 }}>
+        <div style={{ background:"#13131f", borderRadius:14, padding:14, border:"1px solid #2a2a3e", marginBottom:14 }}>
+          <div style={{ fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:1, textTransform:"uppercase" as const, marginBottom:10 }}>
             Joueurs ({numPlayers})
           </div>
           <div style={{ display:"flex", gap:8, marginBottom:12 }}>
-            {[2,3,4,5,6].filter(n => n <= members.length).map(n => (
-              <button key={n} onClick={() => setNumPlayers(n)}
-                style={{ flex:1, padding:"10px", borderRadius:10, border:"none", cursor:"pointer",
-                  background: numPlayers===n ? "linear-gradient(135deg,#ef4444,#b91c1c)" : "#1e1e2e",
-                  color: numPlayers===n ? "#fff" : "#6b7280", fontWeight:700, fontSize:16 }}>
+            {[2,3,4,5,6].filter(n=>n<=members.length).map(n=>(
+              <button key={n} onClick={()=>setNumPlayers(n)}
+                style={{ flex:1, padding:"9px", borderRadius:10, border:"none", cursor:"pointer",
+                  background:numPlayers===n?"linear-gradient(135deg,#ef4444,#b91c1c)":"#1e1e2e",
+                  color:numPlayers===n?"#fff":"#6b7280", fontWeight:700, fontSize:15 }}>
                 {n}
               </button>
             ))}
           </div>
-          {players.map(p => (
-            <div key={p.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 0",
-              borderBottom:"1px solid #1a1a2a" }}>
-              <div style={{ width:18, height:18, borderRadius:"50%", background:p.color,
-                boxShadow:`0 0 8px ${p.color}80` }}/>
+          {players.map(p=>(
+            <div key={p.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"7px 0", borderBottom:"1px solid #1a1a2a" }}>
+              <div style={{ width:16, height:16, borderRadius:"50%", background:p.color, boxShadow:`0 0 8px ${p.color}80` }}/>
               <span style={{ fontSize:13, color:"#e2e8f0" }}>{p.name}</span>
             </div>
           ))}
         </div>
 
-        <div style={{ background:"#13131f", borderRadius:14, padding:14, border:"1px solid #2a2a3e", marginBottom:20, fontSize:12, color:"#6b7280", lineHeight:1.6 }}>
-          🔮 Les billes partent au feu vert · 🐌 Des obstacles ralentissent · 🏆 Le gagnant distribue 10 gorgées
+        <div style={{ background:"#13131f", borderRadius:14, padding:12, border:"1px solid #2a2a3e", marginBottom:18, fontSize:12, color:"#6b7280", lineHeight:1.6 }}>
+          🚦 Feux F1 · 🐌 Obstacles (cônes, flaques, dos d'âne) · 🏆 Gagnant distribue 10 gorgées
         </div>
 
         <button onClick={startRace}
@@ -337,142 +325,114 @@ export default function MarbleRace({ members, onClose }: Props) {
     </div>
   )
 
-  // ── RACE / COUNTDOWN ────────────────────────────────────────────────────
+  // ── RACE ─────────────────────────────────────────────────────────────────
   if (phase === "countdown" || phase === "racing") {
-    const sp = splineRef.current
-    const obs = obstaclesRef.current
+    const track = trackRef.current
+    const [camX, camY] = cam
+    const offX = camX - VIEW_W/2
+    const offY = camY - VIEW_H/2
 
-    // Build SVG path for visible portion
-    const camX = camera.x - VIEW_W/2
-    const camY = camera.y - VIEW_H/2
+    // Build SVG path for the track (all points transformed to viewport)
+    const trackSvg = TRACK_PTS.map((p,i)=>`${i===0?'M':'L'}${(p[0]-offX).toFixed(1)},${(p[1]-offY).toFixed(1)}`).join(' ')
 
-    // Collect visible track segments
-    const visWpts = WAYPOINTS.filter(([x,y]) =>
-      x > camX - 200 && x < camX + VIEW_W + 200 &&
-      y > camY - 200 && y < camY + VIEW_H + 200
-    )
+    // Obstacle world positions
+    const obsPts = OBSTACLES.map(ob=>({ ...ob, pos: obsPos(track, ob.d, ob.off) }))
 
-    // Build path
-    const toSvg = ([wx,wy]: [number,number]) =>
-      `${wx - camX},${wy - camY}`
-    const trackPath = WAYPOINTS.map((p,i) => `${i===0?'M':'L'}${toSvg(p)}`).join(' ')
-
-    // Rankings
-    const ranked = [...marbles].sort((a,b) => b.progress - a.progress)
+    const ranked = [...mbs].sort((a,b)=>b.t-a.t)
 
     return (
       <div style={BG}>
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap')`}</style>
         {/* Header */}
-        <div style={{ width:"100%", maxWidth:VIEW_W, padding:"12px 16px 8px",
-          display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-          <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:22, letterSpacing:3, color:"#ef4444" }}>
+        <div style={{ width:"100%", maxWidth:VIEW_W, padding:"10px 16px 6px",
+          display:"flex", justifyContent:"space-between", alignItems:"center", flexShrink:0 }}>
+          <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:20, letterSpacing:3, color:"#ef4444" }}>
             🔮 BILLES
           </div>
-          {phase === "countdown" && <F1Lights phase={lightPhase}/>}
-          {phase === "racing" && lightPhase === "go" && <F1Lights phase="go"/>}
+          <F1Lights phase={lightPhase}/>
+          <button onClick={onClose} style={{ background:"none", border:"none", color:"#6b7280", fontSize:18, cursor:"pointer" }}>✕</button>
         </div>
 
         {/* Track viewport */}
-        <div style={{ width:VIEW_W, height:VIEW_H, overflow:"hidden", borderRadius:16,
-          border:"1px solid #1e1e2e", background:"#0d1117", position:"relative" }}>
-          <svg width={VIEW_W} height={VIEW_H} style={{ display:"block" }}>
-            {/* Sky/ground */}
-            <rect width={VIEW_W} height={VIEW_H} fill="#0d1117"/>
+        <div style={{ width:VIEW_W, height:VIEW_H, overflow:"hidden", background:"#080d12",
+          flexShrink:0, borderTop:"1px solid #1e1e2e", borderBottom:"1px solid #1e1e2e" }}>
+          <svg width={VIEW_W} height={VIEW_H}>
+            <rect width={VIEW_W} height={VIEW_H} fill="#0a1018"/>
 
-            {/* Track border (white) */}
-            <path d={trackPath} fill="none" stroke="#e2e8f0" strokeWidth={TRACK_WIDTH + 8}
+            {/* Tarmac outer (kerb) */}
+            <path d={trackSvg} fill="none" stroke="#c0c0c0" strokeWidth={ROAD_W+10}
+              strokeLinecap="round" strokeLinejoin="round" strokeDasharray="18,18"/>
+            {/* Tarmac surface */}
+            <path d={trackSvg} fill="none" stroke="#1c2230" strokeWidth={ROAD_W}
               strokeLinecap="round" strokeLinejoin="round"/>
-            {/* Track kerb stripes (red/white) */}
-            <path d={trackPath} fill="none" stroke="#ef4444" strokeWidth={TRACK_WIDTH + 8}
-              strokeLinecap="round" strokeLinejoin="round"
-              strokeDasharray="20,20" opacity="0.6"/>
-            {/* Tarmac */}
-            <path d={trackPath} fill="none" stroke="#1e2530" strokeWidth={TRACK_WIDTH}
-              strokeLinecap="round" strokeLinejoin="round"/>
-            {/* Road texture */}
-            <path d={trackPath} fill="none" stroke="#252d3a" strokeWidth={TRACK_WIDTH - 4}
-              strokeLinecap="round" strokeLinejoin="round"
-              strokeDasharray="40,6" opacity="0.4"/>
-            {/* Center line */}
-            <path d={trackPath} fill="none" stroke="#fbbf24" strokeWidth="2"
-              strokeLinecap="round" strokeLinejoin="round"
-              strokeDasharray="15,15" opacity="0.5"/>
+            {/* Road grain */}
+            <path d={trackSvg} fill="none" stroke="#222d3c" strokeWidth={ROAD_W-6}
+              strokeLinecap="round" strokeLinejoin="round" strokeDasharray="35,5" opacity="0.5"/>
+            {/* Center dashes */}
+            <path d={trackSvg} fill="none" stroke="#fbbf24" strokeWidth="2"
+              strokeLinecap="round" strokeLinejoin="round" strokeDasharray="14,14" opacity="0.45"/>
 
-            {/* Start/finish */}
+            {/* Start/finish line */}
             {(() => {
-              const [sx,sy] = WAYPOINTS[0]
-              const svgX = sx - camX, svgY = sy - camY
-              if (svgX > -50 && svgX < VIEW_W+50 && svgY > -50 && svgY < VIEW_H+50) return (
-                <>
-                  <line x1={svgX-30} y1={svgY-8} x2={svgX+30} y2={svgY+8}
-                    stroke="white" strokeWidth="6" strokeDasharray="6,6"/>
-                  <text x={svgX} y={svgY-20} fill="white" fontSize="11"
-                    textAnchor="middle" fontWeight="bold" fontFamily="sans-serif">S/F</text>
-                </>
+              const [sx,sy] = TRACK_PTS[0]
+              const vx = sx-offX, vy = sy-offY
+              if (vx>-60&&vx<VIEW_W+60&&vy>-60&&vy<VIEW_H+60) return (
+                <g>
+                  <line x1={vx-32} y1={vy-5} x2={vx+32} y2={vy+5}
+                    stroke="white" strokeWidth="8" strokeDasharray="8,8"/>
+                  <text x={vx} y={vy-16} fill="white" fontSize="10"
+                    textAnchor="middle" fontWeight="bold" fontFamily="sans-serif">
+                    🏁 S/F
+                  </text>
+                </g>
               )
             })()}
 
             {/* Obstacles */}
-            {obs.map((ob, i) => {
-              const ox = ob.x - camX, oy = ob.y - camY
-              if (ox < -30 || ox > VIEW_W+30 || oy < -30 || oy > VIEW_H+30) return null
+            {obsPts.map((ob,i)=>{
+              const vx = ob.pos[0]-offX, vy = ob.pos[1]-offY
+              if (vx<-30||vx>VIEW_W+30||vy<-30||vy>VIEW_H+30) return null
               return (
                 <g key={i}>
-                  {ob.type === "cone" && <>
-                    <polygon points={`${ox},${oy-ob.r} ${ox-ob.r*0.7},${oy+ob.r*0.5} ${ox+ob.r*0.7},${oy+ob.r*0.5}`}
-                      fill="#f97316" stroke="#fff" strokeWidth="1"/>
-                    <line x1={ox-ob.r*0.4} y1={oy+ob.r*0.1} x2={ox+ob.r*0.4} y2={oy+ob.r*0.1}
-                      stroke="white" strokeWidth="2"/>
+                  {ob.type==="cone"&&<>
+                    <polygon points={`${vx},${vy-ob.r} ${vx-ob.r*.8},${vy+ob.r*.6} ${vx+ob.r*.8},${vy+ob.r*.6}`}
+                      fill="#f97316" stroke="white" strokeWidth="1.5"/>
+                    <line x1={vx-ob.r*.5} y1={vy} x2={vx+ob.r*.5} y2={vy} stroke="white" strokeWidth="2"/>
                   </>}
-                  {ob.type === "puddle" && <>
-                    <ellipse cx={ox} cy={oy} rx={ob.r*1.4} ry={ob.r*0.7}
-                      fill="#60a5fa" opacity="0.5"/>
-                    <ellipse cx={ox-3} cy={oy-2} rx={ob.r*0.5} ry={ob.r*0.3}
-                      fill="white" opacity="0.3"/>
+                  {ob.type==="puddle"&&<>
+                    <ellipse cx={vx} cy={vy} rx={ob.r*1.5} ry={ob.r*.7} fill="#3b82f6" opacity="0.55"/>
+                    <ellipse cx={vx-ob.r*.4} cy={vy-ob.r*.2} rx={ob.r*.5} ry={ob.r*.25} fill="white" opacity="0.35"/>
                   </>}
-                  {ob.type === "bump" && <>
-                    <ellipse cx={ox} cy={oy} rx={ob.r*1.2} ry={ob.r*0.5}
-                      fill="#374151"/>
-                    <ellipse cx={ox} cy={oy-2} rx={ob.r} ry={ob.r*0.35}
-                      fill="#4b5563"/>
+                  {ob.type==="bump"&&<>
+                    <ellipse cx={vx} cy={vy} rx={ob.r*1.3} ry={ob.r*.55} fill="#2a3545"/>
+                    <ellipse cx={vx} cy={vy-2} rx={ob.r*1.1} ry={ob.r*.4} fill="#374151"/>
+                    <ellipse cx={vx-ob.r*.3} cy={vy-3} rx={ob.r*.4} ry={ob.r*.15} fill="#4b5563" opacity="0.6"/>
                   </>}
                 </g>
               )
             })}
 
             {/* Marbles */}
-            {marbles.map(m => {
-              const mx = m.x - camX, my = m.y - camY
-              if (mx < -20 || mx > VIEW_W+20 || my < -20 || my > VIEW_H+20) return null
-              const stunScale = m.stunned > 0 ? 0.85 : 1
+            {mbs.map(m=>{
+              const vx = m.wx-offX, vy = m.wy-offY
+              if (vx<-20||vx>VIEW_W+20||vy<-20||vy>VIEW_H+20) return null
+              const blink = m.stun>0 && m.stun%6<3
               return (
-                <g key={m.id} transform={`translate(${mx},${my})`}>
-                  {/* Shadow */}
-                  <ellipse cx="2" cy="5" rx="9" ry="4" fill="black" opacity="0.3"/>
-                  {/* Trail */}
-                  {phase === "racing" && !m.finished && (
-                    <circle r="7" fill={m.color} opacity="0.1"/>
-                  )}
-                  {/* Marble body */}
+                <g key={m.id}>
+                  <ellipse cx={vx+2} cy={vy+4} rx="9" ry="4" fill="black" opacity="0.3"/>
                   <defs>
-                    <radialGradient id={`mg${m.id}`} cx="35%" cy="30%" r="65%">
-                      <stop offset="0%" stopColor="white" stopOpacity="0.8"/>
-                      <stop offset="35%" stopColor={m.color}/>
-                      <stop offset="100%" stopColor={`${m.color}66`}/>
+                    <radialGradient id={`g${m.id}`} cx="35%" cy="30%" r="65%">
+                      <stop offset="0%" stopColor="white" stopOpacity="0.75"/>
+                      <stop offset="40%" stopColor={m.color}/>
+                      <stop offset="100%" stopColor={`${m.color}55`}/>
                     </radialGradient>
                   </defs>
-                  <circle r={9 * stunScale} fill={`url(#mg${m.id})`}
-                    stroke={m.stunned > 0 ? "#fff" : "none"} strokeWidth="1"/>
-                  {/* Stun flash */}
-                  {m.stunned > 0 && m.stunned % 6 < 3 && (
-                    <circle r="12" fill="white" opacity="0.2"/>
-                  )}
-                  {/* Name */}
-                  <text y="-14" textAnchor="middle" fontSize="9" fill="white"
-                    fontWeight="bold" fontFamily="sans-serif"
-                    style={{ textShadow:"0 1px 3px #000" }}>
-                    {m.name.slice(0,4)}
+                  {blink && <circle cx={vx} cy={vy} r="14" fill="white" opacity="0.2"/>}
+                  <circle cx={vx} cy={vy} r="9" fill={`url(#g${m.id})`}
+                    stroke={blink?"white":"none"} strokeWidth="1.5"/>
+                  <text x={vx} y={vy-13} textAnchor="middle" fontSize="9"
+                    fill="white" fontWeight="bold" fontFamily="sans-serif"
+                    style={{paintOrder:"stroke" as any, stroke:"#000", strokeWidth:"2px"}}>
+                    {m.name.slice(0,5)}
                   </text>
                 </g>
               )
@@ -480,20 +440,18 @@ export default function MarbleRace({ members, onClose }: Props) {
           </svg>
         </div>
 
-        {/* Live leaderboard */}
-        <div style={{ width:"100%", maxWidth:VIEW_W, padding:"8px 16px",
-          display:"flex", gap:6, flexWrap:"wrap" as const, justifyContent:"center" }}>
-          {ranked.map((m, rank) => (
+        {/* Live ranking */}
+        <div style={{ width:"100%", maxWidth:VIEW_W, padding:"8px 12px",
+          display:"flex", gap:6, flexWrap:"wrap" as const, justifyContent:"center", flexShrink:0 }}>
+          {ranked.map((m,i)=>(
             <div key={m.id} style={{ display:"flex", alignItems:"center", gap:5,
               background:"#13131f", borderRadius:8, padding:"4px 8px",
-              border:`1px solid ${m.finished ? m.color : "#2a2a3e"}`,
-              opacity: m.finished ? 0.7 : 1 }}>
-              <span style={{ fontSize:10, color:"#6b7280" }}>{rank+1}.</span>
-              <div style={{ width:10, height:10, borderRadius:"50%", background:m.color }}/>
+              border:`1px solid ${m.t>=1?m.color:"#2a2a3e"}` }}>
+              <span style={{ fontSize:10, color:"#6b7280" }}>{i+1}.</span>
+              <div style={{ width:9, height:9, borderRadius:"50%", background:m.color }}/>
               <span style={{ fontSize:11, color:"#e2e8f0" }}>{m.name}</span>
-              <div style={{ width:36, height:3, borderRadius:1, background:"#1e1e2e" }}>
-                <div style={{ width:`${m.progress*100}%`, height:"100%", borderRadius:1,
-                  background:m.color }}/>
+              <div style={{ width:40, height:3, borderRadius:1, background:"#1e1e2e" }}>
+                <div style={{ width:`${m.t*100}%`, height:"100%", borderRadius:1, background:m.color, transition:"width 0.1s" }}/>
               </div>
             </div>
           ))}
@@ -504,77 +462,65 @@ export default function MarbleRace({ members, onClose }: Props) {
 
   // ── FINISHED ─────────────────────────────────────────────────────────────
   if (phase === "finished" && winner) {
-    const losers = marbles.filter(m => m.id !== winner.id)
-
+    const losers = mbs.filter(m=>m.id!==winner.id)
     return (
-      <div style={BG}>
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap')`}</style>
+      <div style={{...BG, overflowY:"auto"}}>
         <div style={{ width:"100%", maxWidth:380, padding:"24px 16px 60px" }}>
-
-          {/* Winner banner */}
           <div style={{ background:"linear-gradient(135deg,#1a0800,#0f0400)",
-            border:"2px solid #fbbf24", borderRadius:20, padding:"20px",
-            textAlign:"center", marginBottom:16 }}>
-            <div style={{ fontSize:44, marginBottom:4 }}>🏆</div>
-            <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:30,
-              color:"#fbbf24", letterSpacing:2, marginBottom:6 }}>
+            border:"2px solid #fbbf24", borderRadius:20, padding:"18px",
+            textAlign:"center" as const, marginBottom:14 }}>
+            <div style={{ fontSize:42, marginBottom:4 }}>🏆</div>
+            <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:28,
+              color:"#fbbf24", letterSpacing:2, marginBottom:4 }}>
               {winner.name} GAGNE !
             </div>
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
-              <div style={{ width:16, height:16, borderRadius:"50%", background:winner.color,
-                boxShadow:`0 0 10px ${winner.color}` }}/>
-              <span style={{ fontSize:12, color:"#9ca3af" }}>Distribue 10 gorgées à qui il veut</span>
-            </div>
+            <div style={{ fontSize:12, color:"#9ca3af" }}>Distribue 10 gorgées comme tu veux</div>
           </div>
 
-          {/* Distribute sips */}
           <div style={{ background:"#13131f", borderRadius:14, padding:14,
-            border:"1px solid #2a2a3e", marginBottom:16 }}>
-            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:12, alignItems:"center" }}>
+            border:"1px solid #2a2a3e", marginBottom:14 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:10, alignItems:"center" }}>
               <div style={{ fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:1, textTransform:"uppercase" as const }}>
-                Distribuer les gorgées
+                Gorgées à distribuer
               </div>
-              <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:22,
-                color: gorgesLeft > 0 ? "#fbbf24" : "#22c55e" }}>
-                {gorgesLeft > 0 ? `${gorgesLeft} restantes` : "✅ Tout distribué !"}
+              <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:20,
+                color: gorgesLeft>0 ? "#fbbf24" : "#22c55e" }}>
+                {gorgesLeft>0 ? `${gorgesLeft} restantes` : "✅ OK !"}
               </div>
             </div>
-
-            {losers.map(p => (
+            {losers.map(p=>(
               <div key={p.id} style={{ display:"flex", alignItems:"center", gap:10,
                 padding:"10px 0", borderBottom:"1px solid #1a1a2a" }}>
-                <div style={{ width:14, height:14, borderRadius:"50%", background:p.color,
-                  boxShadow:`0 0 6px ${p.color}80` }}/>
+                <div style={{ width:12, height:12, borderRadius:"50%", background:p.color }}/>
                 <span style={{ flex:1, fontSize:13, color:"#e2e8f0", fontWeight:600 }}>{p.name}</span>
-                <button onClick={() => removeSip(p.id)} disabled={(distribution[p.id]||0) <= 0}
-                  style={{ width:30, height:30, borderRadius:8, border:"1px solid #2a2a3e",
-                    background:"#1e1e2e", color:"#9ca3af", fontSize:16, cursor:"pointer",
-                    opacity:(distribution[p.id]||0) <= 0 ? 0.3 : 1 }}>−</button>
-                <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:24, color:p.color,
-                  width:28, textAlign:"center" as const }}>
-                  {distribution[p.id] || 0}
+                <button onClick={()=>remSip(p.id)} disabled={(gorges[p.id]||0)<=0}
+                  style={{ width:28, height:28, borderRadius:7, border:"1px solid #2a2a3e",
+                    background:"#1e1e2e", color:"#9ca3af", fontSize:15, cursor:"pointer",
+                    opacity:(gorges[p.id]||0)<=0?0.3:1 }}>−</button>
+                <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:22, color:p.color,
+                  width:26, textAlign:"center" as const }}>
+                  {gorges[p.id]||0}
                 </div>
-                <button onClick={() => addSip(p.id)} disabled={gorgesLeft <= 0}
-                  style={{ width:30, height:30, borderRadius:8, border:"none",
-                    background: gorgesLeft > 0 ? p.color : "#1e1e2e",
-                    color:"#fff", fontSize:16, cursor:"pointer",
-                    opacity: gorgesLeft <= 0 ? 0.3 : 1 }}>+</button>
+                <button onClick={()=>addSip(p.id)} disabled={gorgesLeft<=0}
+                  style={{ width:28, height:28, borderRadius:7, border:"none",
+                    background:gorgesLeft>0?p.color:"#1e1e2e",
+                    color:"#fff", fontSize:15, cursor:"pointer", opacity:gorgesLeft<=0?0.3:1 }}>+</button>
               </div>
             ))}
           </div>
 
           <div style={{ display:"flex", gap:10 }}>
-            <button onClick={() => { setPhase("setup"); setWinner(null) }}
-              style={{ flex:1, padding:"13px", borderRadius:13, border:"1px solid #2a2a3e",
+            <button onClick={()=>{setPhase("setup");setWinner(null)}}
+              style={{ flex:1, padding:"12px", borderRadius:12, border:"1px solid #2a2a3e",
                 cursor:"pointer", background:"#1e1e2e", color:"#9ca3af", fontSize:13, fontWeight:700 }}>
               🔄 Rejouer
             </button>
-            <button onClick={onClose} disabled={gorgesLeft > 0}
-              style={{ flex:2, padding:"13px", borderRadius:13, border:"none",
-                cursor: gorgesLeft > 0 ? "not-allowed" : "pointer",
-                background: gorgesLeft > 0 ? "#2a2a3e" : "linear-gradient(135deg,#22c55e,#16a34a)",
-                color: gorgesLeft > 0 ? "#4b5563" : "#fff", fontSize:13, fontWeight:700 }}>
-              {gorgesLeft > 0 ? `Distribue encore ${gorgesLeft} gorgées` : "✅ C'est parti !"}
+            <button onClick={onClose} disabled={gorgesLeft>0}
+              style={{ flex:2, padding:"12px", borderRadius:12, border:"none",
+                cursor:gorgesLeft>0?"not-allowed":"pointer",
+                background:gorgesLeft>0?"#2a2a3e":"linear-gradient(135deg,#22c55e,#16a34a)",
+                color:gorgesLeft>0?"#4b5563":"#fff", fontSize:13, fontWeight:700 }}>
+              {gorgesLeft>0?`Encore ${gorgesLeft} gorgées…`:"✅ C'est parti !"}
             </button>
           </div>
         </div>
