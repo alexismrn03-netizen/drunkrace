@@ -133,7 +133,7 @@ function Camera({ onCapture, onCancel, secondsLeft }: {
       </div>
 
       {/* Bottom controls */}
-      <div style={{ padding:"20px 32px 40px",
+      <div style={{ padding:"20px 32px 100px",
         display:"flex", justifyContent:"space-between", alignItems:"center" }}>
         {preview ? <>
           <button onClick={redo}
@@ -377,19 +377,22 @@ export default function BeDrunkController({ groupId, myUserId, myPseudo, members
 
   const uploadPhoto = async (blob: Blob) => {
     if (!activeEvent) return
-    const path = `${groupId}/${activeEvent.id}/${myUserId}.jpg`
-    const { data, error } = await supabase.storage
-      .from("bedrunk-photos").upload(path, blob, { upsert: true, contentType:"image/jpeg" })
-    if (error) { console.error(error); return }
-    const { data: { publicUrl } } = supabase.storage.from("bedrunk-photos").getPublicUrl(path)
-    const isLate = secondsLeft <= 0
-    await supabase.from("bedrunk_photos").upsert({
-      event_id: activeEvent.id, group_id: groupId,
-      user_id: myUserId, photo_url: publicUrl, late: isLate
-    })
-    setPosted(true)
-    setShowCamera(false)
-    setShowAlert(false)
+    try {
+      const path = `${groupId}/${activeEvent.id}/${myUserId}.jpg`
+      const { error: upErr } = await supabase.storage
+        .from("bedrunk-photos").upload(path, blob, { upsert: true, contentType:"image/jpeg" })
+      if (upErr) { console.error("Upload error:", upErr); return }
+      const { data: { publicUrl } } = supabase.storage.from("bedrunk-photos").getPublicUrl(path)
+      const isLate = secondsLeft <= 0
+      const { error: dbErr } = await supabase.from("bedrunk_photos").upsert({
+        event_id: activeEvent.id, group_id: groupId,
+        user_id: myUserId, photo_url: publicUrl, late: isLate
+      })
+      if (dbErr) { console.error("DB error:", dbErr); return }
+      setPosted(true)
+      setShowCamera(false)
+      setShowAlert(false)
+    } catch(e) { console.error("BeDrunk upload failed:", e) }
   }
 
   return (
