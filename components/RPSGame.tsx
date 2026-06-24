@@ -82,21 +82,6 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
     return () => clearInterval(interval)
   }, [inviteId, isChallenger])
 
-type Choice = "rock" | "paper" | "scissors" | null
-type Phase = "invite" | "waiting_accept" | "ready_p1" | "lights_p1" | "choose_p1" | "waiting_p2" | "ready_p2" | "lights_p2" | "choose_p2" | "reveal" | "result"
-
-const CHOICES = [
-  { id: "rock" as Choice,     emoji: "🪨", label: "Pierre" },
-  { id: "paper" as Choice,    emoji: "📄", label: "Feuille" },
-  { id: "scissors" as Choice, emoji: "✂️", label: "Ciseaux" },
-]
-
-function getWinner(a: Choice, b: Choice): "p1" | "p2" | "draw" {
-  if (a === b) return "draw"
-  if ((a==="rock"&&b==="scissors")||(a==="paper"&&b==="rock")||(a==="scissors"&&b==="paper")) return "p1"
-  return "p2"
-}
-
 interface Props {
   members: any[]
   myUserId: string
