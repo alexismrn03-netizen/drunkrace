@@ -89,7 +89,7 @@ export default function AvatarEditor({ initial, onSave, onClose }: Props) {
       </Section>
 
       {/* Save */}
-      <button onClick={() => onSave(cfg)}
+      <button onClick={() => { onSave(cfg); onClose(); }}
         style={{ width:"100%", padding:"16px", borderRadius:14, border:"none", cursor:"pointer", background:"linear-gradient(135deg,#e10600,#b30000)", color:"#fff", fontSize:16, fontWeight:700, marginTop:8 }}>
         🏁 Sauvegarder mon pilote !
       </button>
