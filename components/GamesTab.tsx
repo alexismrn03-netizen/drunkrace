@@ -1,6 +1,5 @@
 "use client"
 import { useState } from "react"
-import DuelLeaderboard from "./DuelLeaderboard"
 import DuelGame from "./DuelGame"
 import RPSGame from "./RPSGame"
 import DiceGame from "./DiceGame"
@@ -55,9 +54,6 @@ const GAMES = [
 
 export default function GamesTab({ members, myUserId, groupId, onAwardDistance, onAwardDrink }: Props) {
   const [activeGame, setActiveGame] = useState<string | null>(null)
-  const [showLeaderboard, setShowLeaderboard] = useState(false)
-
-  if (showLeaderboard) return <DuelLeaderboard onClose={() => setShowLeaderboard(false)}/>
 
   if (activeGame === "duel") return (
     <DuelGame
@@ -135,12 +131,6 @@ export default function GamesTab({ members, myUserId, groupId, onAwardDistance, 
           </button>
         ))}
       </div>
-
-      {/* Leaderboard button */}
-      <button onClick={() => setShowLeaderboard(true)}
-        style={{ width:"100%", padding:"14px", borderRadius:14, border:"1px solid #3b1f6a", cursor:"pointer", background:"linear-gradient(135deg,#1a1030,#130d22)", color:"#c084fc", fontSize:14, fontWeight:700, marginBottom:12, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
-        🏆 Classement des Duels
-      </button>
 
       {/* Rules reminder */}
       <div style={{ background:"#13131f", borderRadius:14, padding:14, border:"1px solid #2a2a3e", marginTop:20 }}>
