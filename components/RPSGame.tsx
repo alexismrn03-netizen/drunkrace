@@ -80,8 +80,7 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
     }
     const interval = setInterval(poll, 1500)
     return () => clearInterval(interval)
-  }, [inviteId, isChallenger])seRef } from "react"
-import { createClient } from "@/lib/supabase"
+  }, [inviteId, isChallenger])
 
 type Choice = "rock" | "paper" | "scissors" | null
 type Phase = "invite" | "waiting_accept" | "ready_p1" | "lights_p1" | "choose_p1" | "waiting_p2" | "ready_p2" | "lights_p2" | "choose_p2" | "reveal" | "result"
