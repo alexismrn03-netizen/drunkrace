@@ -368,17 +368,16 @@ export default function BeDrunkController({ groupId, myUserId, myPseudo, members
   const trigger = async () => {
     if (showAlert || showCamera || activeEvent) return // prevent double trigger
     const expiresAt = new Date(Date.now() + 3 * 60 * 1000).toISOString()
-    // Show alert immediately for creator
-    const fakeEvent = { id: "pending", group_id: groupId, triggered_at: new Date().toISOString(), expires_at: expiresAt, status: "active" }
-    setActiveEvent(fakeEvent as any)
-    setPosted(false)
-    setSecondsLeft(180)
-    setShowAlert(true)
-    // Insert in DB for other members
+    // Insert in DB first to get real UUID
     const { data } = await supabase.from("bedrunk_events").insert({
       group_id: groupId, expires_at: expiresAt, status:"active"
     }).select().single()
-    if (data) setActiveEvent(data)
+    if (!data) return
+    // Then show alert with real event
+    setActiveEvent(data)
+    setPosted(false)
+    setSecondsLeft(180)
+    setShowAlert(true)
   }
 
   const uploadPhoto = async (blob: Blob) => {
