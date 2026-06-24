@@ -229,9 +229,11 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
   const [playerRolls, setPlayerRolls] = useState<Record<string,number|null>>({})
   const [localTurn, setLocalTurn] = useState(0)
   const [isRolling, setIsRolling] = useState(false)
-  const myValRef = useRef<number>(0) // 0 = not yet rolled
-  const isRollingRef = useRef(false) // blocks realtime updates during animation
-  const [dieDisplayValue, setDieDisplayValue] = useState(1) // what the die shows visually
+  const valRef = useRef<{[key:string]:number}>({}) // locked values per userId
+  const isRollingRef = useRef(false)
+  const [dieDisplayValue, setDieDisplayValue] = useState(1)
+  // Keep myValRef for invite mode compat
+  const myValRef = useRef<number>(0)
   const [phase, setPhase] = useState<Phase>(invite ? "rolling" : "setup")
   const [losers, setLosers] = useState<string[]>([])
   const [tieRound, setTieRound] = useState(false)
@@ -277,11 +279,11 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
   }, [inviteId, mode, selected])
 
   const computeResult = (rolls: Record<string,number|null>, playerIds: string[]) => {
-    // Always use myValRef for our own value if it has been set (>0)
+    // Use per-player locked refs — these are the ground truth
     const resolvedRolls = { ...rolls }
-    if (myValRef.current > 0) {
-      resolvedRolls[myUserId] = myValRef.current
-    }
+    Object.keys(valRef.current).forEach(uid => {
+      if (valRef.current[uid] > 0) resolvedRolls[uid] = valRef.current[uid]
+    })
     const vals = playerIds.map(id => ({
       id,
       val: resolvedRolls[id] ?? 99
@@ -316,23 +318,23 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
 
   const rollLocal = async (userId: string) => {
     if (isRolling || playerRolls[userId] != null) return
-    // Generate val immediately and lock it in ref
+    // Generate and lock val PER PLAYER in a separate ref slot
     const val = trueRandom()
-    myValRef.current = val
+    valRef.current[userId] = val // locked per userId, never overwritten by other players
     playDiceSound()
     setIsRolling(true)
-    setDieDisplayValue(val) // pre-set target face
-    // Animation: 2.3s rolling
+    setDieDisplayValue(val)
+    // Animation 2.3s
     await new Promise(r => setTimeout(r, 2300))
     setIsRolling(false)
-    // 1.5s pause on final face
+    // 1.5s pause to read the face
     await new Promise(r => setTimeout(r, 1500))
-    // Use the LOCKED ref value, never anything else
-    const lockedVal = myValRef.current
+    // Read from per-player ref — guaranteed to be the right value
+    const lockedVal = valRef.current[userId]
     setPlayerRolls(prev => {
       const next = { ...prev, [userId]: lockedVal }
       const allDone = gamePlayers.every(p => next[p.userId] != null)
-      if (allDone) setTimeout(() => computeResult(next, gamePlayers.map(p=>p.userId)), 600)
+      if (allDone) setTimeout(() => computeResult(next, gamePlayers.map(p=>p.userId)), 300)
       else setLocalTurn(t => t + 1)
       return next
     })
@@ -343,7 +345,8 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
     // Lock val immediately in ref - this NEVER changes
     const val = trueRandom()
     myValRef.current = val
-    isRollingRef.current = true // block realtime updates
+    valRef.current[myUserId] = val
+    isRollingRef.current = true
     playDiceSound()
     setIsRolling(true)
     setDieDisplayValue(val) // tell die which face to land on
@@ -471,7 +474,7 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
                 {currentPlayer?.name}
               </div>
               <button onClick={()=>rollLocal(currentPlayer?.userId)} disabled={isRolling} style={{ background:"none", border:"none", cursor:"pointer", padding:0 }}>
-                <Dice3D value={isRolling ? dieDisplayValue : (currentRoll || 1)} rolling={currentRolling} size={130}/>
+                <Dice3D value={isRolling ? dieDisplayValue : (valRef.current[currentPlayer?.userId] || currentRoll || dieDisplayValue || 1)} rolling={currentRolling} size={130}/>
               </button>
               {!isRolling && currentRoll == null && (
                 <button onClick={()=>rollLocal(currentPlayer?.userId)}
