@@ -1,6 +1,6 @@
 "use client"
 import { useState, useRef, useEffect, useCallback } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { createClient } from "@/lib/supabase"
 
 interface BeDrunkEvent {
   id: string
