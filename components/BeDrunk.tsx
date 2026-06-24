@@ -233,8 +233,8 @@ export function BeDrunkGallery({ groupId, myUserId }: { groupId:string; myUserId
     load()
     // Realtime: refresh when new events or photos arrive
     const sub = supabase.channel(`gallery:${groupId}`)
-      .on("postgres_changes", { event:"INSERT", schema:"public", table:"bedrunk_events", filter:`group_id=eq.${groupId}` }, () => load())
-      .on("postgres_changes", { event:"INSERT", schema:"public", table:"bedrunk_photos", filter:`group_id=eq.${groupId}` }, () => load())
+      .on("postgres_changes", { event:"INSERT", schema:"public", table:"bedrunk_events" }, (p: any) => { if (p.new?.group_id === groupId) load() })
+      .on("postgres_changes", { event:"INSERT", schema:"public", table:"bedrunk_photos" }, (p: any) => { if (p.new?.group_id === groupId) load() })
       .subscribe()
     return () => { supabase.removeChannel(sub) }
   }, [groupId, myUserId])
@@ -439,6 +439,8 @@ export default function BeDrunkController({ groupId, myUserId, myPseudo, members
       setPosted(true)
       setShowCamera(false)
       setShowAlert(false)
+      // Reset active event so gallery can reload via realtime
+      setTimeout(() => setActiveEvent(null), 2000)
     } catch(e) { console.error("BeDrunk upload failed:", e) }
   }
 
