@@ -55,7 +55,8 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
       const { data } = await supabase.from("game_invites").select("*").eq("id", inviteId).single()
       if (!data) return
       if (isChallenger && data.status === "accepted" && phase === "waiting_accept") {
-        setPhase("ready_p1")
+        // Mode online: pas besoin de "passe le téléphone", aller direct au choix
+        setPhase("choose_p1")
       }
       if (isChallenger && data.game_data?.p2_choice && phase === "waiting_p2") {
         setOpponentChoice(data.game_data.p2_choice)
@@ -79,7 +80,7 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
         const data = payload.new
         // Challenger sees: opponent accepted → go to lights
         if (isChallenger && data.status === "accepted" && phase === "waiting_accept") {
-          setPhase("ready_p1")
+          setPhase("choose_p1")
         }
         // Challenger sees: opponent made choice
         if (isChallenger && data.game_data?.p2_choice && phase === "waiting_p2") {
@@ -342,6 +343,12 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
 
   // ── READY SCREENS → direct choose (pas de feux) ──────────────────────────
   if (phase === "ready_p1" || phase === "ready_p2") {
+    // En mode online, skip l'écran "passe le téléphone" → direct au choix
+    if (modeSelected === "invite") {
+      const nextPhase = phase === "ready_p1" ? "choose_p1" : "choose_p2"
+      setTimeout(() => setPhase(nextPhase), 0)
+      return null
+    }
     const isP1 = phase === "ready_p1"
     const color = isP1 ? "#ef4444" : "#3b82f6"
     const bg = isP1 ? "#1c0505" : "#0c1a3a"
