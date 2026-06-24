@@ -337,6 +337,7 @@ export default function BeDrunkController({ groupId, myUserId, myPseudo, members
   const [showCamera, setShowCamera] = useState(false)
   const [posted, setPosted] = useState(false)
   const timerRef = useRef<NodeJS.Timeout|null>(null)
+  const postedEventIds = useRef<Set<string>>(new Set())
   const supabase = createClient()
 
   // Poll every 4s for active BeDrunk events (plus realtime as backup)
@@ -353,6 +354,8 @@ export default function BeDrunkController({ groupId, myUserId, myPseudo, members
         .limit(1)
         .single()
       if (data) {
+        // Ne pas re-déclencher un event qu'on a déjà traité (posté ou ignoré)
+        if (postedEventIds.current.has(data.id)) return
         const secs = Math.max(0, Math.floor((new Date(data.expires_at).getTime() - Date.now()) / 1000))
         if (secs > 0) {
           setActiveEvent(data)
@@ -370,6 +373,7 @@ export default function BeDrunkController({ groupId, myUserId, myPseudo, members
         payload => {
           const ev = payload.new as BeDrunkEvent
           if (activeEvent) return
+          if (postedEventIds.current.has(ev.id)) return
           const secs = Math.max(0, Math.floor((new Date(ev.expires_at).getTime() - Date.now()) / 1000))
           if (secs > 0) { setActiveEvent(ev); setPosted(false); setSecondsLeft(secs); setShowAlert(true) }
         })
@@ -439,8 +443,9 @@ export default function BeDrunkController({ groupId, myUserId, myPseudo, members
       setPosted(true)
       setShowCamera(false)
       setShowAlert(false)
-      // Reset active event so gallery can reload via realtime
-      setTimeout(() => setActiveEvent(null), 2000)
+      // Marquer cet event comme traité pour ne pas le re-déclencher
+      if (activeEvent) postedEventIds.current.add(activeEvent.id)
+      setActiveEvent(null)
     } catch(e) { console.error("BeDrunk upload failed:", e) }
   }
 
