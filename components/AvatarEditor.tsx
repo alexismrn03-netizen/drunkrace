@@ -2,9 +2,9 @@
 import { useState } from "react"
 import DrunkAvatar, { type AvatarConfig, SKIN_TONES, HAIR_COLORS, OUTFIT_COLORS, DEFAULT_AVATAR } from "./DrunkAvatar"
 
-const HAIR_STYLE_LABELS = ["Court","Long","Chignon","Mohawk","Côté"]
-const OUTFIT_LABELS     = ["Casual","Soirée","F1 🏎️","Sportif","Festif"]
-const ACCESSORY_LABELS  = ["Aucun","Lunettes soleil","Lunettes","Chapeau 🎉","Couronne 👑","Casque F1 🏎️"]
+const HAIR_STYLE_LABELS = ["Court","Long","Afro","Mohawk","Queue","Chignon","Chauve ✨"]
+const OUTFIT_LABELS     = ["Casual","Smoking 🎩","Maillot 🏖️","Cap. Morgan 🍺","Pyjama 😴","Sportif ⚡","F1 🏎️"]
+const ACCESSORY_LABELS  = ["Aucun","Lunettes soleil","Lunettes rondes","Chapeau 🎉","Couronne 👑","Chapeau pirate ☠️","Casque F1 🏎️","Palmes 🤿"]
 
 interface Props {
   initial: AvatarConfig
