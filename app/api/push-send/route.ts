@@ -5,7 +5,7 @@ import webpush from 'web-push'
 export async function POST(req: NextRequest) {
   webpush.setVapidDetails(
     'mailto:contact@drunkrace.app',
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+    (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BLWzaJFFT5F1YiPO5yb-iqps8A5Os9w7F0p4n_vyGdYtU1EqEglNKs2IDyWcfa4n7L4rl8lhHhGbN_Lip-RpEK0'),
     process.env.VAPID_PRIVATE_KEY!
   )
   try {
