@@ -250,16 +250,27 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
       .on("postgres_changes", { event:"UPDATE", schema:"public", table:"game_invites", filter:`id=eq.${inviteId}` }, (payload:any) => {
         const rolls: Record<string,number> = payload.new.game_data?.rolls || {}
         const playerIds: string[] = payload.new.game_data?.player_ids || selected
-        // If we haven't finished our own roll animation yet, skip this update entirely
-        // We'll trigger computeResult ourselves at the end of rollRemote
-        if (isRollingRef.current) return
-        // Inject our locked value (in case we finished but DB update was slow)
-        if (myValRef.current > 0) {
-          rolls[myUserId] = myValRef.current
-        }
-        setPlayerRolls(rolls)
-        if (playerIds.every(id => rolls[id] != null)) {
-          computeResult(rolls, playerIds)
+        // NEVER override our own value from DB — only update others
+        if (myValRef.current > 0) rolls[myUserId] = myValRef.current
+        // Update display for other players only
+        setPlayerRolls(prev => {
+          const merged = { ...prev }
+          Object.keys(rolls).forEach(id => {
+            if (id !== myUserId) merged[id] = rolls[id] // only update others
+            else if (myValRef.current > 0) merged[id] = myValRef.current // keep our locked val
+          })
+          return merged
+        })
+        // Only trigger result if we have already finished our animation (myValRef set + not rolling)
+        if (!isRollingRef.current && myValRef.current > 0 && playerIds.every(id => {
+          const r = id === myUserId ? myValRef.current : rolls[id]
+          return r != null
+        })) {
+          const finalRolls: Record<string,number> = {}
+          playerIds.forEach(id => {
+            finalRolls[id] = id === myUserId ? myValRef.current : rolls[id]
+          })
+          computeResult(finalRolls, playerIds)
         }
       })
       .subscribe()

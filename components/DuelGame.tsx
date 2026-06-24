@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect, useRef } from "react"
+import { createClient } from "@/lib/supabase"
 import { DRINK_BASES, DRINK_CATEGORIES, alcoholGrams, calcDistance, type DrinkEntry } from "@/lib/drinks"
 
 type Phase = "setup" | "ready1" | "lights" | "p1" | "ready2" | "p2" | "result"
@@ -155,20 +156,33 @@ export default function DuelGame({ members, onAwardDistance, onClose }: Props) {
     }
   }
 
-  const applyResults = () => {
+  const applyResults = async () => {
+    const supabase = createClient()
     const p1Drink = DRINK_CATALOG.find(d => d.id === p1.drinkId)
     const p2Drink = DRINK_CATALOG.find(d => d.id === p2.drinkId)
     const p1Won = (p1.time || 99999) < (p2.time || 99999)
 
-    if (p1UserId && p1Drink) {
+    if (p1UserId && p1Drink && p1.time) {
       const alc = alcoholGrams(p1.vol_cl, p1Drink.degree_pct)
       const dist = calcDistance(alc, p1.vol_cl)
       onAwardDistance(p1UserId, dist + (p1Won ? 10 : -5), { ...p1Drink, vol_cl: p1.vol_cl })
+      // Save record
+      await supabase.from("duel_records").insert({
+        user_id: p1UserId, drink_id: p1.drinkId, drink_name: p1Drink.name,
+        vol_cl: p1.vol_cl, degree_pct: p1Drink.degree_pct,
+        time_ms: p1.time, won: p1Won
+      })
     }
-    if (p2UserId && p2Drink) {
+    if (p2UserId && p2Drink && p2.time) {
       const alc = alcoholGrams(p2.vol_cl, p2Drink.degree_pct)
       const dist = calcDistance(alc, p2.vol_cl)
       onAwardDistance(p2UserId, dist + (!p1Won ? 10 : -5), { ...p2Drink, vol_cl: p2.vol_cl })
+      // Save record
+      await supabase.from("duel_records").insert({
+        user_id: p2UserId, drink_id: p2.drinkId, drink_name: p2Drink.name,
+        vol_cl: p2.vol_cl, degree_pct: p2Drink.degree_pct,
+        time_ms: p2.time, won: !p1Won
+      })
     }
     onClose()
   }
