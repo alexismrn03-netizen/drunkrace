@@ -1,5 +1,6 @@
 "use client"
 import { useState, useRef, useEffect, useCallback } from "react"
+import { registerPush, getPushSubscription } from "@/lib/pushNotifications"
 import { createClient } from "@/lib/supabase"
 
 interface BeDrunkEvent {
@@ -397,6 +398,18 @@ export default function BeDrunkController({ groupId, myUserId, myPseudo, members
   const trigger = async () => {
     if (showAlert || showCamera || activeEvent) return // prevent double trigger
     const expiresAt = new Date(Date.now() + 3 * 60 * 1000).toISOString()
+    // Send push to all group members
+    fetch('/api/push-send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        groupId,
+        title: '📸 BEDRUNK !',
+        body: 'Prends ta photo maintenant ! Tu as 3 minutes ⏱️',
+        url: window.location.href
+      })
+    }).catch(console.error)
+
     // Insert in DB first to get real UUID
     const { data } = await supabase.from("bedrunk_events").insert({
       group_id: groupId, expires_at: expiresAt, status:"active"
