@@ -45,9 +45,31 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
   const me = members.find(m => m.user_id === myUserId)
   const opponent = members.find(m => m.user_id === (isChallenger ? targetUserId : invite?.from_user_id))
 
-  // Subscribe to invite updates
+  // Subscribe to invite updates + polling backup
   useEffect(() => {
     if (!inviteId) return
+
+    // Polling every 1.5s as reliable backup
+    const poll = setInterval(async () => {
+      const { data } = await supabase.from("game_invites").select("*").eq("id", inviteId).single()
+      if (!data) return
+      if (isChallenger && data.status === "accepted" && phase === "waiting_accept") {
+        setPhase("ready_p1")
+      }
+      if (isChallenger && data.game_data?.p2_choice && phase === "waiting_p2") {
+        setOpponentChoice(data.game_data.p2_choice)
+        computeResult(myChoice, data.game_data.p2_choice)
+      }
+      if (data.game_data?.p1_choice && data.game_data?.p2_choice && data.status === "completed") {
+        const w = getWinner(data.game_data.p1_choice, data.game_data.p2_choice)
+        const iWin = isChallenger ? w === "p1" : w === "p2"
+        setMyChoice(isChallenger ? data.game_data.p1_choice : data.game_data.p2_choice)
+        setOpponentChoice(isChallenger ? data.game_data.p2_choice : data.game_data.p1_choice)
+        setResult(w === "draw" ? "draw" : iWin ? "win" : "lose")
+        setPhase("result")
+      }
+    }, 1500)
+
     const channel = supabase.channel(`rps-${inviteId}`)
       .on("postgres_changes", {
         event: "UPDATE", schema: "public", table: "game_invites",
