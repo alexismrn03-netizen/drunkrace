@@ -35,6 +35,7 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
   const [inviteId, setInviteId] = useState(invite?.id || "")
   const [myChoice, setMyChoice] = useState<Choice>(null)
   const p1ChoiceRef = useRef<Choice>(null)
+  const myChoiceRef = useRef<Choice>(null)
   const [opponentChoice, setOpponentChoice] = useState<Choice>(null)
   const [result, setResult] = useState<"win"|"lose"|"draw"|"win_p1"|"win_p2"|null>(null)
   const [sending, setSending] = useState(false)
@@ -58,7 +59,7 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
       }
       if (isChallenger && data.game_data?.p2_choice && phase === "waiting_p2") {
         setOpponentChoice(data.game_data.p2_choice)
-        computeResult(myChoice, data.game_data.p2_choice)
+        computeResult(myChoiceRef.current, data.game_data.p2_choice)
       }
       if (data.game_data?.p1_choice && data.game_data?.p2_choice && data.status === "completed") {
         const w = getWinner(data.game_data.p1_choice, data.game_data.p2_choice)
@@ -83,7 +84,7 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
         // Challenger sees: opponent made choice
         if (isChallenger && data.game_data?.p2_choice && phase === "waiting_p2") {
           setOpponentChoice(data.game_data.p2_choice)
-          computeResult(myChoice, data.game_data.p2_choice)
+          computeResult(myChoiceRef.current, data.game_data.p2_choice)
         }
         // Opponent sees: challenger made choice → go to their turn
         // P1 chose notification handled by opponent's own flow
@@ -162,6 +163,7 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
     }
     // Online mode — my choice is always me
     setMyChoice(c)
+    myChoiceRef.current = c
     if (isChallenger) {
       // P1 chose → save and wait for P2
       await supabase.from("game_invites").update({
