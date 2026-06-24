@@ -32,8 +32,13 @@ export default function GroupLobby({ user, profile, onJoinGroup, onProfileUpdate
   const deleteGroup = async (g: any) => {
     const isCreator = g.creator_id === user.id
     if (isCreator) {
+      // Delete children first to avoid FK constraint errors
+      await supabase.from("race_events").delete().eq("group_id", g.id)
+      await supabase.from("game_invites").delete().eq("group_id", g.id)
+      await supabase.from("group_photos").delete().eq("group_id", g.id)
+      await supabase.from("group_members").delete().eq("group_id", g.id)
       const { error } = await supabase.from("groups").delete().eq("id", g.id)
-      if (error) console.error("delete group:", error)
+      if (error) { alert("Erreur suppression : " + error.message); return }
     } else {
       const { error } = await supabase.from("group_members").delete().eq("group_id", g.id).eq("user_id", user.id)
       if (error) console.error("leave group:", error)
