@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  serverExternalPackages: ['@dicebear/core', '@dicebear/collection', '@resvg/resvg-js'],
 };
 
 export default nextConfig;
