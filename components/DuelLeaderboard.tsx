@@ -3,7 +3,7 @@ import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase"
 import { DRINK_BASES } from "@/lib/drinks"
 
-interface Record {
+interface DuelRecord {
   id: string
   user_id: string
   pseudo: string
@@ -26,7 +26,7 @@ function getMedal(i: number) {
 
 export default function DuelLeaderboard({ onClose }: { onClose: () => void }) {
   const supabase = createClient()
-  const [records, setRecords] = useState<Record[]>([])
+  const [records, setRecords] = useState<DuelRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [filterDrink, setFilterDrink] = useState<string>("all")
   const [filterVol, setFilterVol] = useState<number | "all">("all")
@@ -62,7 +62,7 @@ export default function DuelLeaderboard({ onClose }: { onClose: () => void }) {
     .filter(r => filterVol === "all" || r.vol_cl === filterVol)
 
   // Group by drink+vol combo for display when "all" selected
-  const grouped: Record<string, Record[]> = {}
+  const grouped: {[key:string]: DuelRecord[]} = {}
   filtered.forEach(r => {
     const key = `${r.drink_id}_${r.vol_cl}`
     if (!grouped[key]) grouped[key] = []
