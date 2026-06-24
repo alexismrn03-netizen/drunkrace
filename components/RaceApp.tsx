@@ -496,11 +496,11 @@ function ProfileTab({ myMember, user, group, onUpdate, onShowGlobal }: any) {
 function TabBar({ active, onChange }: {active:string, onChange:(t:string)=>void}) {
   const tabs=[{id:"race",label:"🏁 Piste"},{id:"drink",label:"🍺 Boire"},{id:"games",label:"🎮 Jeux"},{id:"photos",label:"📸 Photos"},{id:"stats",label:"📊 Stats"},{id:"profile",label:"👤 Profil"}]
   return (
-    <div style={{display:"flex",position:"fixed",bottom:0,left:0,right:0,background:"#0a0a14",borderTop:"1px solid #1a1a2a",zIndex:1000,paddingBottom:"env(safe-area-inset-bottom, 0px)"}}>
+    <div style={{display:"flex",position:"fixed",bottom:0,left:0,right:0,background:"#0a0a14",borderTop:"1px solid #1a1a2a",zIndex:1000,paddingBottom:"env(safe-area-inset-bottom, 0px)",height:70}}>
       {tabs.map(t=>(
-        <button key={t.id} onClick={()=>onChange(t.id)} style={{flex:1,padding:"10px 0 7px",background:"none",border:"none",color:active===t.id?"#c084fc":"#4b5563",fontSize:9,fontWeight:active===t.id?700:400,cursor:"pointer",display:"flex",flexDirection:"column" as const,alignItems:"center",gap:1}}>
-          <span style={{fontSize:22}}>{t.label.split(" ")[0]}</span>
-          <span style={{letterSpacing:.3}}>{t.label.split(" ").slice(1).join(" ")}</span>
+        <button key={t.id} onClick={()=>onChange(t.id)} style={{flex:1,padding:"8px 0 6px",background:"none",border:"none",color:active===t.id?"#c084fc":"#4b5563",fontSize:8.5,fontWeight:active===t.id?700:400,cursor:"pointer",display:"flex",flexDirection:"column" as const,alignItems:"center",gap:2,minWidth:0,overflow:"hidden"}}>
+          <span style={{fontSize:19,lineHeight:1}}>{t.label.split(" ")[0]}</span>
+          <span style={{whiteSpace:"nowrap" as const,overflow:"hidden",textOverflow:"ellipsis",width:"100%",textAlign:"center" as const,paddingInline:1}}>{t.label.split(" ").slice(1).join(" ")}</span>
         </button>
       ))}
     </div>
