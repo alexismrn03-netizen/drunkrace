@@ -11,7 +11,7 @@ interface Props {
 // Deck complet 52 cartes + 2 jokers
 const SUITS = ["♠", "♥", "♦", "♣"]
 const VALUES = [
-  { label: "A",  value: 1,  emoji: "💀", name: "L'As",     color: "#ef4444", border: "#7f1d1d", bg: "linear-gradient(145deg,#1c0505,#0d0202)" },
+  { label: "A",  value: 14, emoji: "💀", name: "L'As",     color: "#ef4444", border: "#7f1d1d", bg: "linear-gradient(145deg,#1c0505,#0d0202)" },
   { label: "2",  value: 2,  emoji: "🍼", name: "Le Rookie", color: "#60a5fa", border: "#1e3a8a", bg: "linear-gradient(145deg,#071020,#030810)" },
   { label: "3",  value: 3,  emoji: "😬", name: "",          color: "#a3a3a3", border: "#374151", bg: "linear-gradient(145deg,#111827,#0a0f1a)" },
   { label: "4",  value: 4,  emoji: "🤢", name: "",          color: "#4ade80", border: "#166534", bg: "linear-gradient(145deg,#0a1a0a,#050d05)" },
@@ -82,14 +82,12 @@ export default function HigherLower({ members, myUserId, onAwardDistance, onClos
         return
       }
 
-      // As special: vaut 1 ET 14
-      // Si la carte actuelle est As → elle est à la fois la plus haute et la plus basse
-      // → tie, on repioche
+      // A = 14 (plus haute carte), ordre: 2 < 3 < ... < K < A
       const currVal = currentCard.isJoker ? 7 : currentCard.value
       const nextVal = next.value
 
-      // As après K = tie (A=1 ET A=14, les deux sont vrais)
-      const isTie = (currVal === 13 && nextVal === 1) || (currVal === 1 && nextVal === 13) || (currVal === nextVal)
+      // Égalité → repioche
+      const isTie = currVal === nextVal
 
       if (isTie) {
         setIsCorrect(null)
@@ -99,8 +97,8 @@ export default function HigherLower({ members, myUserId, onAwardDistance, onClos
       }
 
       const correct =
-        (dir === "higher" && (nextVal > currVal || (nextVal === 1 && currVal < 13))) ||
-        (dir === "lower"  && (nextVal < currVal || (nextVal === 1 && currVal > 1)))
+        (dir === "higher" && nextVal > currVal) ||
+        (dir === "lower"  && nextVal < currVal)
 
       setIsCorrect(correct)
       setHistory(h => [...h, { label: next.label, correct }])
@@ -260,7 +258,7 @@ export default function HigherLower({ members, myUserId, onAwardDistance, onClos
         <div style={{ width:"100%", maxWidth:360, display:"flex", flexDirection:"column" as const, gap:14, alignItems:"center" }}>
           <div style={{ textAlign:"center" as const, padding:"14px 24px", borderRadius:16, background:"#1a1030", border:"1px solid #3b1f6a" }}>
             <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:26, color:"#c084fc", letterSpacing:3 }}>🤝 ÉGALITÉ !</div>
-            <div style={{ fontSize:12, color:"#9ca3af", marginTop:4 }}>L'As vaut 1 et 14 — on repioche, personne ne boit</div>
+            <div style={{ fontSize:12, color:"#9ca3af", marginTop:4 }}>Même valeur — on repioche, personne ne boit</div>
           </div>
           <button onClick={next}
             style={{ width:"100%", padding:"15px", borderRadius:14, border:"none", cursor:"pointer", background:"linear-gradient(135deg,#6d28d9,#4c1d95)", color:"#fff", fontFamily:"'Bebas Neue',cursive", fontSize:17, letterSpacing:2 }}>
