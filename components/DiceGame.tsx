@@ -334,8 +334,11 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
     setPlayerRolls(prev => {
       const next = { ...prev, [userId]: lockedVal }
       const allDone = gamePlayers.every(p => next[p.userId] != null)
-      if (allDone) setTimeout(() => computeResult(next, gamePlayers.map(p=>p.userId)), 300)
-      else setLocalTurn(t => t + 1)
+      if (allDone) {
+        setTimeout(() => computeResult(next, gamePlayers.map(p => p.userId)), 300)
+      } else {
+        setLocalTurn(t => t + 1)
+      }
       return next
     })
   }
