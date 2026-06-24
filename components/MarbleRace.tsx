@@ -166,7 +166,7 @@ export default function MarbleRace({members,onClose}:Props) {
     id:i,name:m.pseudo||`J${i+1}`,colorIdx:picks[i]??i
   }))
 
-  const BASE=2.6 // px/frame base speed
+  const BASE=7.5 // px/frame base speed
 
   const doStart=()=>{
     const wi=Math.floor(Math.random()*nPlayers)
@@ -203,7 +203,7 @@ export default function MarbleRace({members,onClose}:Props) {
         let finished:boolean=m.finished
 
         const sf=stun>0?0.45:1
-        const bf=boost>0?1.85:1
+        const bf=boost>0?1.6:1
         stun=Math.max(0,stun-1)
         boost=Math.max(0,boost-1)
 
@@ -232,7 +232,7 @@ export default function MarbleRace({members,onClose}:Props) {
           for(const o of obs){
             const dx=tx-o.wx,dy=ty-o.wy
             if(dx*dx+dy*dy<(o.r+9)*(o.r+9)){
-              stun=o.type==="puddle"?42:o.type==="bump"?24:15
+              stun=o.type==="puddle"?28:o.type==="bump"?16:10
               vd=Math.max(vd*(o.type==="puddle"?.72:.83),BASE*.38)
               vl=(Math.random()-.5)*2.2;break
             }
