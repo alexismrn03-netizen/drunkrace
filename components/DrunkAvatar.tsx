@@ -257,16 +257,21 @@ export function renderAvatarSVG(cfg: AvatarConfig, bac: number = 0, size: number
         <line x1="57.5" y1="36" x2="66" y2="36" stroke="#92400e" stroke-width="1.5"/>
         <circle cx="30" cy="36" r="6" fill="#bfdbfe" opacity="0.3"/>
         <circle cx="50" cy="36" r="6" fill="#bfdbfe" opacity="0.3"/>`
-      case 3: // Chapeau de fête
+      case 3: // Chapeau de fête — couvre le dessus de la tête, cache les cheveux du haut
         return `
-        <polygon points="40,-2 22,18 58,18" fill="${oc}"/>
-        <polygon points="40,-2 30,8 50,8" fill="${lighten(oc,25)}" opacity="0.5"/>
-        <rect x="22" y="16" width="36" height="5" rx="2" fill="${lighten(oc,-25)}"/>
-        <circle cx="40" cy="-4" r="3" fill="#fbbf24"/>
-        <!-- Confettis -->
-        <circle cx="27" cy="5" r="1.5" fill="#ef4444"/>
-        <circle cx="53" cy="8" r="1.5" fill="#22c55e"/>
-        <circle cx="35" cy="3" r="1" fill="#60a5fa"/>`
+        <!-- Bande élastique qui cache les cheveux du haut -->
+        <rect x="17" y="14" width="46" height="8" rx="4" fill="${lighten(oc,-30)}"/>
+        <!-- Cône -->
+        <polygon points="40,-8 20,16 60,16" fill="${oc}"/>
+        <polygon points="40,-8 30,4 50,4" fill="${lighten(oc,30)}" opacity="0.45"/>
+        <!-- Pompon -->
+        <circle cx="40" cy="-10" r="4" fill="#fbbf24"/>
+        <circle cx="40" cy="-10" r="2.5" fill="#fde68a"/>
+        <!-- Confettis sur le cône -->
+        <circle cx="32" cy="2" r="1.8" fill="#ef4444"/>
+        <circle cx="50" cy="5" r="1.8" fill="#22c55e"/>
+        <circle cx="40" cy="0" r="1.5" fill="#60a5fa"/>
+        <circle cx="28" cy="10" r="1.5" fill="#fbbf24"/>`
       case 4: // Couronne
         return `
         <polygon points="20,16 20,4 28,12 40,2 52,12 60,4 60,16" fill="#fbbf24"/>
@@ -291,20 +296,31 @@ export function renderAvatarSVG(cfg: AvatarConfig, bac: number = 0, size: number
         <!-- Bandeau rouge -->
         <rect x="22" y="14" width="36" height="5" rx="2" fill="#dc2626" opacity="0.9"/>
         <circle cx="40" cy="16" r="3" fill="#fbbf24"/>`
-      case 6: // Casque F1
+      case 6: // Casque F1 — couvre tout le visage + oreilles
         return `
-        <ellipse cx="40" cy="22" rx="26" ry="24" fill="${oc}"/>
-        <ellipse cx="40" cy="20" rx="24" ry="22" fill="${lighten(oc,15)}"/>
-        <!-- Visière -->
-        <path d="M18,28 Q40,40 62,28 L60,34 Q40,46 20,34 Z" fill="#1a1a2e" opacity="0.85"/>
-        <path d="M20,29 Q40,40 60,29" fill="none" stroke="#60a5fa" stroke-width="1.5" opacity="0.6"/>
-        <!-- Bande centrale -->
-        <rect x="36" y="0" width="8" height="28" rx="4" fill="${lighten(oc,-20)}" opacity="0.7"/>
-        <!-- Écrous -->
-        <circle cx="22" cy="20" r="3" fill="${lighten(oc,-30)}"/>
-        <circle cx="58" cy="20" r="3" fill="${lighten(oc,-30)}"/>
-        <!-- Reflet -->
-        <ellipse cx="32" cy="10" rx="8" ry="5" fill="white" opacity="0.18"/>`
+        <!-- Coque principale du casque -->
+        <ellipse cx="40" cy="28" rx="28" ry="30" fill="${oc}"/>
+        <ellipse cx="40" cy="26" rx="26" ry="28" fill="${lighten(oc,15)}"/>
+        <!-- Cache-oreilles -->
+        <ellipse cx="13" cy="35" rx="7" ry="10" fill="${oc}"/>
+        <ellipse cx="67" cy="35" rx="7" ry="10" fill="${oc}"/>
+        <!-- Visière noire — couvre tout le visage -->
+        <path d="M15,24 Q40,18 65,24 L63,48 Q40,56 17,48 Z" fill="#0a0a0a" opacity="0.95"/>
+        <!-- Reflet visière -->
+        <path d="M20,26 Q35,22 55,26 L53,34 Q35,30 22,34 Z" fill="white" opacity="0.12"/>
+        <path d="M22,24 Q40,20 58,24" fill="none" stroke="#333" stroke-width="1.5" opacity="0.6"/>
+        <!-- Ligne de visière (séparation casque/visière) -->
+        <path d="M15,24 Q40,18 65,24" fill="none" stroke="${lighten(oc,-30)}" stroke-width="2.5"/>
+        <!-- Bande centrale déco -->
+        <rect x="37" y="0" width="6" height="30" rx="3" fill="${lighten(oc,-25)}" opacity="0.8"/>
+        <!-- Écrous latéraux -->
+        <circle cx="18" cy="22" r="3" fill="${lighten(oc,-35)}"/>
+        <circle cx="62" cy="22" r="3" fill="${lighten(oc,-35)}"/>
+        <!-- Reflet haut du casque -->
+        <ellipse cx="30" cy="12" rx="10" ry="6" fill="white" opacity="0.2"/>
+        <!-- HANS device -->
+        <rect x="20" y="50" width="8" height="6" rx="2" fill="${lighten(oc,-20)}"/>
+        <rect x="52" y="50" width="8" height="6" rx="2" fill="${lighten(oc,-20)}"/>`
       case 7: // Palmes (sur les pieds)
         return `
         <!-- Palmes vertes sur les pieds -->
