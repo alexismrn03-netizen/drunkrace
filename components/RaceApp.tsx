@@ -455,7 +455,32 @@ function ProfileTab({ myMember, user, group, onUpdate, onShowGlobal }: any) {
         <DrunkAvatar config={avatarCfg} bac={0} size={100} animate={false}/>
         <div style={{display:"inline-block",background:"linear-gradient(135deg,#a855f7,#ec4899)",borderRadius:20,padding:"4px 16px",fontSize:13,fontWeight:700,color:"#fff",marginTop:8,marginBottom:10}}>{pseudo}</div>
         <br/>
-        <button onClick={()=>setEditAvatar(true)} style={{background:"#13131f",border:"1px solid #3b1f6a",borderRadius:12,padding:"8px 20px",color:"#c084fc",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+        {/* Push notifications */}
+      {"Notification" in (typeof window !== "undefined" ? window : {}) && (
+        <button onClick={async()=>{
+          const p = await (window as any).Notification?.requestPermission()
+          if(p==="granted"){
+            try {
+              const {registerPush} = await import("@/lib/pushNotifications")
+              const sub = await registerPush()
+              if(sub){
+                const res = await fetch("/api/push-subscribe",{
+                  method:"POST",headers:{"Content-Type":"application/json"},
+                  body:JSON.stringify({subscription:sub,userId:user.id})
+                })
+                if(res.ok) alert("✅ Notifications activées !")
+              }
+            } catch(e){ console.error(e) }
+          }
+        }}
+        style={{width:"100%",padding:"14px",borderRadius:14,border:"1px solid #2a2a3e",
+          cursor:"pointer",background:"#13131f",color:"#e2e8f0",fontSize:14,
+          fontWeight:700,marginBottom:10,display:"flex",alignItems:"center",
+          justifyContent:"center",gap:8}}>
+          🔔 Activer les notifications BeDrunk
+        </button>
+      )}
+      <button onClick={()=>setEditAvatar(true)} style={{background:"#13131f",border:"1px solid #3b1f6a",borderRadius:12,padding:"8px 20px",color:"#c084fc",fontSize:13,fontWeight:700,cursor:"pointer"}}>
           🎨 Personnaliser l'avatar
         </button>
       </div>
