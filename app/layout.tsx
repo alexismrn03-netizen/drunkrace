@@ -46,7 +46,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
               navigator.serviceWorker.register('/sw.js')
-                .then(r => console.log('SW registered'))
+                .then(async reg => {
+                  console.log('SW registered');
+                  await navigator.serviceWorker.ready;
+                  // Auto-request push permission at boot so notifs work even if BeDrunk tab never opened
+                  if ('PushManager' in window && Notification.permission === 'default') {
+                    Notification.requestPermission();
+                  }
+                })
                 .catch(e => console.log('SW failed:', e))
             })
           }
