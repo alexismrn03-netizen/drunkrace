@@ -360,17 +360,19 @@ export default function BeDrunkController({ groupId, myUserId, myPseudo, members
   }, [activeEvent, showAlert])
 
   const trigger = async () => {
+    if (showAlert || showCamera || activeEvent) return // prevent double trigger
     const expiresAt = new Date(Date.now() + 3 * 60 * 1000).toISOString()
+    // Show alert immediately for creator
+    const fakeEvent = { id: "pending", group_id: groupId, triggered_at: new Date().toISOString(), expires_at: expiresAt, status: "active" }
+    setActiveEvent(fakeEvent as any)
+    setPosted(false)
+    setSecondsLeft(180)
+    setShowAlert(true)
+    // Insert in DB for other members
     const { data } = await supabase.from("bedrunk_events").insert({
       group_id: groupId, expires_at: expiresAt, status:"active"
     }).select().single()
-    // Show alert immediately for creator too
-    if (data) {
-      setActiveEvent(data)
-      setPosted(false)
-      setSecondsLeft(180)
-      setShowAlert(true)
-    }
+    if (data) setActiveEvent(data)
   }
 
   const uploadPhoto = async (blob: Blob) => {
@@ -395,11 +397,14 @@ export default function BeDrunkController({ groupId, myUserId, myPseudo, members
       {/* Trigger button for creator */}
       {isCreator && (
         <button onClick={trigger}
-          style={{ position:"fixed", bottom:90, right:16, zIndex:100,
-            background:"linear-gradient(135deg,#ec4899,#be185d)",
+          disabled={!!activeEvent}
+        style={{ position:"fixed", bottom:90, right:16, zIndex:100,
+            background: activeEvent ? "#2a2a3e" : "linear-gradient(135deg,#ec4899,#be185d)",
             border:"none", borderRadius:14, padding:"10px 16px",
-            color:"white", fontSize:13, fontWeight:700, cursor:"pointer",
-            boxShadow:"0 4px 20px rgba(236,72,153,0.4)" }}>
+            color:"white", fontSize:13, fontWeight:700,
+            cursor: activeEvent ? "not-allowed" : "pointer",
+            opacity: activeEvent ? 0.5 : 1,
+            boxShadow: activeEvent ? "none" : "0 4px 20px rgba(236,72,153,0.4)" }}>
           📸 BeDrunk
         </button>
       )}
