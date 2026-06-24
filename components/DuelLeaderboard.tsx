@@ -35,14 +35,23 @@ export default function DuelLeaderboard({ onClose }: { onClose: () => void }) {
 
   const load = async () => {
     setLoading(true)
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("duel_records")
-      .select("*, profiles!user_id(pseudo)")
+      .select("*")
       .order("time_ms", { ascending: true })
       .limit(200)
-    if (data) {
+    if (error) { console.error("duel_records error:", error); setLoading(false); return }
+    if (data && data.length > 0) {
+      // Fetch pseudos separately
+      const userIds = [...new Set(data.map((r: any) => r.user_id))]
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, pseudo")
+        .in("id", userIds)
+      const pseudoMap: {[key:string]:string} = {}
+      ;(profiles || []).forEach((p: any) => { pseudoMap[p.id] = p.pseudo })
       setRecords(data.map((r: any) => ({
-        ...r, pseudo: r.profiles?.pseudo || "?"
+        ...r, pseudo: pseudoMap[r.user_id] || "?"
       })))
     }
     setLoading(false)
