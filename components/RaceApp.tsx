@@ -600,7 +600,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
 
   const myMember  = members.find(m=>m.isMe)
   const samMember = members.find(m=>m.is_sam)
-  const isCreator = myMember?.is_creator||false
+  const isCreator = group?.creator_id === user?.id
 
   const handleAddDrink = async (drink:DrinkEntry)=>{
     if(!myMember) return
