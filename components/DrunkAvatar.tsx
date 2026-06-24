@@ -333,15 +333,47 @@ export function renderAvatarSVG(cfg: AvatarConfig, bac: number = 0, size: number
     <!-- Shadow -->
     <ellipse cx="40" cy="126" rx="22" ry="5" fill="rgba(0,0,0,0.18)"/>
 
-    <!-- Legs -->
-    <rect x="24" y="94" width="13" height="26" rx="6" fill="#1a1a2e"/>
-    <rect x="43" y="94" width="13" height="26" rx="6" fill="#1a1a2e"/>
-    <!-- Shoes -->
-    <ellipse cx="30" cy="120" rx="11" ry="5" fill="#111"/>
-    <ellipse cx="50" cy="120" rx="11" ry="5" fill="#111"/>
-    <!-- Shoe shine -->
-    <ellipse cx="27" cy="118" rx="5" ry="2" fill="white" opacity="0.12"/>
-    <ellipse cx="47" cy="118" rx="5" ry="2" fill="white" opacity="0.12"/>
+    <!-- Legs + Shoes — depend on outfit -->
+    ${cfg.outfit === 2 ? `
+      <!-- Maillot: jambes nues + pieds nus -->
+      <rect x="24" y="94" width="13" height="26" rx="6" fill="${skin}"/>
+      <rect x="43" y="94" width="13" height="26" rx="6" fill="${skin}"/>
+      <ellipse cx="30" cy="120" rx="10" ry="4" fill="${sd}"/>
+      <ellipse cx="50" cy="120" rx="10" ry="4" fill="${sd}"/>
+    ` : cfg.outfit === 4 ? `
+      <!-- Pyjama: jambes rayées -->
+      <rect x="24" y="94" width="13" height="26" rx="6" fill="${oc}"/>
+      <rect x="43" y="94" width="13" height="26" rx="6" fill="${oc}"/>
+      <rect x="26" y="94" width="4" height="26" rx="2" fill="${lighten(oc,-30)}" opacity="0.4"/>
+      <rect x="45" y="94" width="4" height="26" rx="2" fill="${lighten(oc,-30)}" opacity="0.4"/>
+      <!-- Chaussons -->
+      <ellipse cx="30" cy="120" rx="11" ry="5" fill="${lighten(oc,-10)}"/>
+      <ellipse cx="50" cy="120" rx="11" ry="5" fill="${lighten(oc,-10)}"/>
+    ` : cfg.outfit === 3 ? `
+      <!-- Captain Morgan: bottes en cuir -->
+      <rect x="24" y="94" width="13" height="22" rx="6" fill="#3a1800"/>
+      <rect x="43" y="94" width="13" height="22" rx="6" fill="#3a1800"/>
+      <ellipse cx="30" cy="118" rx="12" ry="6" fill="#2a1000"/>
+      <ellipse cx="50" cy="118" rx="12" ry="6" fill="#2a1000"/>
+      <ellipse cx="28" cy="116" rx="5" ry="2" fill="#5a3010" opacity="0.5"/>
+      <ellipse cx="48" cy="116" rx="5" ry="2" fill="#5a3010" opacity="0.5"/>
+    ` : cfg.outfit === 6 ? `
+      <!-- F1: combinaison jambes -->
+      <rect x="24" y="94" width="13" height="24" rx="6" fill="${oc}"/>
+      <rect x="43" y="94" width="13" height="24" rx="6" fill="${oc}"/>
+      <rect x="24" y="110" width="13" height="8" rx="3" fill="${lighten(oc,20)}"/>
+      <rect x="43" y="110" width="13" height="8" rx="3" fill="${lighten(oc,20)}"/>
+      <ellipse cx="30" cy="120" rx="11" ry="5" fill="#111"/>
+      <ellipse cx="50" cy="120" rx="11" ry="5" fill="#111"/>
+    ` : `
+      <!-- Default: jean sombre + chaussures -->
+      <rect x="24" y="94" width="13" height="26" rx="6" fill="#1a1a2e"/>
+      <rect x="43" y="94" width="13" height="26" rx="6" fill="#1a1a2e"/>
+      <ellipse cx="30" cy="120" rx="11" ry="5" fill="#111"/>
+      <ellipse cx="50" cy="120" rx="11" ry="5" fill="#111"/>
+      <ellipse cx="27" cy="118" rx="5" ry="2" fill="white" opacity="0.12"/>
+      <ellipse cx="47" cy="118" rx="5" ry="2" fill="white" opacity="0.12"/>
+    `}
 
     ${accessorySVG.includes('122') ? accessorySVG : ''}
 
