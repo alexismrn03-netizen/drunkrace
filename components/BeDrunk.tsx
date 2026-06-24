@@ -334,25 +334,43 @@ export default function BeDrunkController({ groupId, myUserId, myPseudo, members
   const timerRef = useRef<NodeJS.Timeout|null>(null)
   const supabase = createClient()
 
-  // Listen for new BeDrunk events (for non-creator members)
+  // Poll every 4s for active BeDrunk events (plus realtime as backup)
   useEffect(() => {
+    const check = async () => {
+      if (activeEvent || showAlert || showCamera) return
+      const { data } = await supabase
+        .from("bedrunk_events")
+        .select("*")
+        .eq("group_id", groupId)
+        .eq("status", "active")
+        .gt("expires_at", new Date().toISOString())
+        .order("triggered_at", { ascending: false })
+        .limit(1)
+        .single()
+      if (data) {
+        const secs = Math.max(0, Math.floor((new Date(data.expires_at).getTime() - Date.now()) / 1000))
+        if (secs > 0) {
+          setActiveEvent(data)
+          setPosted(false)
+          setSecondsLeft(secs)
+          setShowAlert(true)
+        }
+      }
+    }
+    check()
+    const iv = setInterval(check, 4000)
+    // Also realtime as backup
     const sub = supabase.channel(`bedrunk:${groupId}:${myUserId}`)
-      .on("postgres_changes", {
-        event:"INSERT", schema:"public", table:"bedrunk_events",
-        filter:`group_id=eq.${groupId}`
-      }, payload => {
-        const ev = payload.new as BeDrunkEvent
-        // Don't override if creator already set it
-        setActiveEvent(ev)
-        setPosted(false)
-        const exp = new Date(ev.expires_at).getTime()
-        const secs = Math.max(0, Math.floor((exp - Date.now()) / 1000))
-        setSecondsLeft(secs)
-        setShowAlert(true)
-      })
+      .on("postgres_changes", { event:"INSERT", schema:"public", table:"bedrunk_events", filter:`group_id=eq.${groupId}` },
+        payload => {
+          const ev = payload.new as BeDrunkEvent
+          if (activeEvent) return
+          const secs = Math.max(0, Math.floor((new Date(ev.expires_at).getTime() - Date.now()) / 1000))
+          if (secs > 0) { setActiveEvent(ev); setPosted(false); setSecondsLeft(secs); setShowAlert(true) }
+        })
       .subscribe()
-    return () => { supabase.removeChannel(sub) }
-  }, [groupId, myUserId])
+    return () => { clearInterval(iv); supabase.removeChannel(sub) }
+  }, [groupId, myUserId, activeEvent, showAlert, showCamera])
 
   // Countdown timer — tourne même pendant la prise de photo
   useEffect(() => {
