@@ -250,9 +250,9 @@ export default function HigherLower({ members, myUserId, onAwardDistance, onClos
         {remaining >= 3 && <div style={{ position:"absolute", top:5, left:5, width:160, height:225, borderRadius:18, background:"#0d0d1c", border:"1.5px solid #1a1a2c", transform:"rotate(3deg)" }}/>}
         {remaining >= 2 && <div style={{ position:"absolute", top:3, left:3, width:160, height:225, borderRadius:18, background:"#0e0e1e", border:"1.5px solid #1c1c30", transform:"rotate(1.5deg)" }}/>}
         {remaining >= 1 && <div style={{ position:"absolute", top:1, left:1, width:160, height:225, borderRadius:18, background:"#0f0f1f", border:"1.5px solid #1e1e30" }}/>}
-        {/* Carte active */}
+        {/* Carte active — toujours revealed, dos uniquement pendant le flip */}
         <div style={{ position:"absolute", top:0, left:0, transition:"opacity 0.3s", opacity: flipping ? 0 : 1 }}>
-          <Card card={displayCard} revealed={phase !== "playing"} />
+          <Card card={displayCard} revealed={true} />
         </div>
         {flipping && (
           <div style={{ position:"absolute", top:0, left:0 }}>
