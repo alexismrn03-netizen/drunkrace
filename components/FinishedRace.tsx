@@ -27,7 +27,7 @@ function Confetti() {
       y: Math.random() * -canvas.height,
       w: 8 + Math.random() * 10,
       h: 4 + Math.random() * 6,
-      color: ["#c084fc","#ec4899","#fbbf24","#4ade80","#60a5fa","#f87171","#a855f7"][Math.floor(Math.random()*7)],
+      color: ["var(--accent)","var(--accent2)","#fbbf24","#4ade80","#60a5fa","#f87171","var(--accent)"][Math.floor(Math.random()*7)],
       vy: 2 + Math.random() * 4,
       vx: (Math.random() - 0.5) * 3,
       rot: Math.random() * Math.PI * 2,
@@ -179,7 +179,7 @@ export default function FinishedRace({ race, onBack }: { race: any, onBack: () =
   const podiumRanks = [1, 0, 2]
 
   return (
-    <div style={{ minHeight:"100vh", background:"#0a0a14", position:"relative", overflowX:"hidden" }}>
+    <div style={{ minHeight:"100vh", background:"var(--bg)", position:"relative", overflowX:"hidden" }}>
       {showConfetti && <Confetti/>}
 
       {/* Header */}
@@ -193,7 +193,7 @@ export default function FinishedRace({ race, onBack }: { race: any, onBack: () =
       {/* Tabs */}
       <div style={{ display:"flex", gap:0, margin:"0 16px 20px", borderRadius:12, overflow:"hidden", border:"1px solid #1f2937", position:"relative", zIndex:2 }}>
         {[{id:"podium",l:"🏆 Podium"},{id:"stats",l:"📊 Stats"},{id:"photos",l:"📸 Photos"}].map(t => (
-          <button key={t.id} onClick={()=>setPhase(t.id as any)} style={{ flex:1, padding:"10px 0", border:"none", cursor:"pointer", background:phase===t.id?"linear-gradient(135deg,#a855f720,#ec489920)":"#13131f", color:phase===t.id?"#c084fc":"#6b7280", fontSize:11, fontWeight:phase===t.id?700:400, outline:phase===t.id?"2px solid #a855f730":"none" }}>
+          <button key={t.id} onClick={()=>setPhase(t.id as any)} style={{ flex:1, padding:"10px 0", border:"none", cursor:"pointer", background:phase===t.id?"linear-gradient(135deg,#a855f720,#ec489920)":"var(--bg-card)", color:phase===t.id?"var(--accent)":"#6b7280", fontSize:11, fontWeight:phase===t.id?700:400, outline:phase===t.id?"2px solid #a855f730":"none" }}>
             {t.l}
           </button>
         ))}
@@ -210,14 +210,14 @@ export default function FinishedRace({ race, onBack }: { race: any, onBack: () =
           </div>
 
           {/* Full ranking */}
-          <div style={{ background:"#13131f", borderRadius:14, padding:14, border:"1px solid #2a2a3e", marginBottom:14 }}>
+          <div style={{ background:"var(--bg-card)", borderRadius:14, padding:14, border:"1px solid #2a2a3e", marginBottom:14 }}>
             <div style={{ fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:1, textTransform:"uppercase" as const, marginBottom:10 }}>Classement complet</div>
             {drinkers.map((m, i) => (
               <div key={m.user_id} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 0", borderBottom:i<drinkers.length-1?"1px solid #1a1a2a":"none" }}>
                 <span style={{ fontSize:16, minWidth:24 }}>{["🥇","🥈","🥉","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣"][i]||"•"}</span>
                 <DrunkAvatar config={parseAvatar(m.avatar_config)} bac={0} size={32} animate={false}/>
                 <span style={{ flex:1, fontSize:13, fontWeight:600, color:"#e2e8f0" }}>{m.pseudo}</span>
-                <span style={{ fontSize:13, fontWeight:700, color:"#c084fc", fontFamily:"'Bebas Neue',cursive" }}>{m.dist.toFixed(1)}m</span>
+                <span style={{ fontSize:13, fontWeight:700, color:"var(--accent)", fontFamily:"'Bebas Neue',cursive" }}>{m.dist.toFixed(1)}m</span>
                 <span style={{ fontSize:10, color:"#6b7280" }}>{m.drinks?.length||0}🍺</span>
               </div>
             ))}
@@ -238,12 +238,12 @@ export default function FinishedRace({ race, onBack }: { race: any, onBack: () =
         <div style={{ padding:"0 16px", position:"relative", zIndex:2 }}>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
             {[
-              { l:"Total verres", v:totalVerres, icon:"🍺", c:"#c084fc" },
-              { l:"Distance totale", v:`${totalDist.toFixed(1)}m`, icon:"🏁", c:"#ec4899" },
+              { l:"Total verres", v:totalVerres, icon:"🍺", c:"var(--accent)" },
+              { l:"Distance totale", v:`${totalDist.toFixed(1)}m`, icon:"🏁", c:"var(--accent2)" },
               { l:"Participants", v:drinkers.length, icon:"👥", c:"#38bdf8" },
               { l:"Événements", v:events.length, icon:"🎭", c:"#fbbf24" },
             ].map(s => (
-              <div key={s.l} style={{ background:"#13131f", borderRadius:12, padding:14, border:"1px solid #2a2a3e" }}>
+              <div key={s.l} style={{ background:"var(--bg-card)", borderRadius:12, padding:14, border:"1px solid #2a2a3e" }}>
                 <div style={{ fontSize:22, marginBottom:4 }}>{s.icon}</div>
                 <div style={{ fontSize:22, fontWeight:700, color:s.c, fontFamily:"'Bebas Neue',cursive" }}>{s.v}</div>
                 <div style={{ fontSize:10, color:"#6b7280" }}>{s.l}</div>
@@ -254,14 +254,14 @@ export default function FinishedRace({ race, onBack }: { race: any, onBack: () =
           {favoriteDrink && (
             <div style={{ background:"linear-gradient(135deg,#1a1030,#130d22)", borderRadius:14, padding:14, border:"1px solid #3b1f6a", marginBottom:14 }}>
               <div style={{ fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:1, marginBottom:6 }}>🍹 BOISSON DU SOIR</div>
-              <div style={{ fontSize:18, fontWeight:700, color:"#c084fc" }}>{favoriteDrink[0]}</div>
+              <div style={{ fontSize:18, fontWeight:700, color:"var(--accent)" }}>{favoriteDrink[0]}</div>
               <div style={{ fontSize:11, color:"#6b7280" }}>commandée {favoriteDrink[1]} fois</div>
             </div>
           )}
 
           {/* Events recap */}
           {events.length > 0 && (
-            <div style={{ background:"#13131f", borderRadius:14, padding:14, border:"1px solid #2a2a3e", marginBottom:14 }}>
+            <div style={{ background:"var(--bg-card)", borderRadius:14, padding:14, border:"1px solid #2a2a3e", marginBottom:14 }}>
               <div style={{ fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:1, textTransform:"uppercase" as const, marginBottom:10 }}>Événements de la soirée</div>
               {events.slice(0,6).map((e:any,i:number) => (
                 <div key={e.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 0", borderBottom:i<Math.min(events.length,6)-1?"1px solid #1a1a2a":"none" }}>
@@ -302,7 +302,7 @@ export default function FinishedRace({ race, onBack }: { race: any, onBack: () =
 
       {/* Back button */}
       <div style={{ padding:"20px 16px 40px", position:"relative", zIndex:2 }}>
-        <button onClick={onBack} style={{ width:"100%", padding:"13px", borderRadius:14, border:"1px solid #2a2a3e", cursor:"pointer", background:"#13131f", color:"#9ca3af", fontSize:14, fontWeight:700 }}>
+        <button onClick={onBack} style={{ width:"100%", padding:"13px", borderRadius:14, border:"1px solid #2a2a3e", cursor:"pointer", background:"var(--bg-card)", color:"#9ca3af", fontSize:14, fontWeight:700 }}>
           ← Retour à l'accueil
         </button>
       </div>
