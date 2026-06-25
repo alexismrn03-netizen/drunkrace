@@ -7,7 +7,7 @@ function BACForecast({ drinks, weight_kg, sex }: { drinks: DrinkEntry[], weight_
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(t) }, [])
 
   if (drinks.length === 0) return (
-    <div style={{ background:"#13131f",borderRadius:14,padding:14,border:"1px solid #2a2a3e",marginBottom:14,textAlign:"center" }}>
+    <div style={{ background:"var(--bg-card)",borderRadius:14,padding:14,border:"1px solid #2a2a3e",marginBottom:14,textAlign:"center" }}>
       <div style={{ fontSize:24,marginBottom:6 }}>📈</div>
       <div style={{ color:"#4b5563",fontSize:12 }}>Ajoute une boisson pour voir les prévisions</div>
     </div>
@@ -31,7 +31,7 @@ function BACForecast({ drinks, weight_kg, sex }: { drinks: DrinkEntry[], weight_
   const nowX = Math.min(Math.max((now - first) / (end - first), 0), 1) * W
 
   return (
-    <div style={{ background:"#13131f",borderRadius:14,padding:14,border:"1px solid #2a2a3e",marginBottom:14 }}>
+    <div style={{ background:"var(--bg-card)",borderRadius:14,padding:14,border:"1px solid #2a2a3e",marginBottom:14 }}>
       <div style={{ fontSize:11,fontWeight:700,color:"#6b7280",letterSpacing:1,textTransform:"uppercase" as const,marginBottom:10 }}>📈 Prévisions alcoolémie</div>
       <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:12 }}>
         <div style={{ flex:1 }}>
@@ -51,8 +51,8 @@ function BACForecast({ drinks, weight_kg, sex }: { drinks: DrinkEntry[], weight_
         <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display:"block" }}>
           <defs>
             <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#a855f7" stopOpacity="0.35"/>
-              <stop offset="100%" stopColor="#a855f7" stopOpacity="0"/>
+              <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.35"/>
+              <stop offset="100%" stopColor="var(--accent)" stopOpacity="0"/>
             </linearGradient>
           </defs>
           {[0.2, 0.5, 1.0].map(v => {
@@ -64,7 +64,7 @@ function BACForecast({ drinks, weight_kg, sex }: { drinks: DrinkEntry[], weight_
             </g>
           })}
           <path d={pathD + ` L${W},${H} L0,${H} Z`} fill="url(#bg)"/>
-          <path d={pathD} fill="none" stroke="#a855f7" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+          <path d={pathD} fill="none" stroke="var(--accent)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
           <line x1={nowX} y1={0} x2={nowX} y2={H} stroke="#ffffff35" strokeWidth={1} strokeDasharray="3,3"/>
           <circle cx={points.reduce((best,p) => p.y < best.y ? p : best, points[0]).x}
                   cy={points.reduce((best,p) => p.y < best.y ? p : best, points[0]).y}
@@ -74,21 +74,21 @@ function BACForecast({ drinks, weight_kg, sex }: { drinks: DrinkEntry[], weight_
 
       {/* Timings */}
       <div style={{ display:"flex",gap:8 }}>
-        <div style={{ flex:1,background:driveTime&&driveTime<=now?"#1a2e0a":"#13131f",border:`1px solid ${driveTime&&driveTime<=now?"#166534":"#2a2a3e"}`,borderRadius:10,padding:"8px" }}>
+        <div style={{ flex:1,background:driveTime&&driveTime<=now?"#1a2e0a":"var(--bg-card)",border:`1px solid ${driveTime&&driveTime<=now?"#166534":"#2a2a3e"}`,borderRadius:10,padding:"8px" }}>
           <div style={{ fontSize:9,color:"#4ade80",fontWeight:700,textTransform:"uppercase" as const }}>🚗 Conduire</div>
           <div style={{ fontSize:14,fontWeight:700,color:"#4ade80",fontFamily:"'Bebas Neue',cursive",marginTop:2 }}>
             {!driveTime || driveTime <= now ? "✅ OK" : fmtTime(driveTime)}
           </div>
           <div style={{ fontSize:9,color:"#6b7280" }}>retour à 0,5‰</div>
         </div>
-        <div style={{ flex:1,background:"#13131f",border:"1px solid #3b1f6a",borderRadius:10,padding:"8px" }}>
-          <div style={{ fontSize:9,color:"#c084fc",fontWeight:700,textTransform:"uppercase" as const }}>😇 Sobre</div>
-          <div style={{ fontSize:14,fontWeight:700,color:"#c084fc",fontFamily:"'Bebas Neue',cursive",marginTop:2 }}>
+        <div style={{ flex:1,background:"var(--bg-card)",border:"1px solid #3b1f6a",borderRadius:10,padding:"8px" }}>
+          <div style={{ fontSize:9,color:"var(--accent)",fontWeight:700,textTransform:"uppercase" as const }}>😇 Sobre</div>
+          <div style={{ fontSize:14,fontWeight:700,color:"var(--accent)",fontFamily:"'Bebas Neue',cursive",marginTop:2 }}>
             {!soberTime || soberTime <= now ? "✅ OK" : fmtTime(soberTime)}
           </div>
           <div style={{ fontSize:9,color:"#6b7280" }}>retour à 0‰</div>
         </div>
-        <div style={{ flex:1,background:"#13131f",border:"1px solid #92400e",borderRadius:10,padding:"8px" }}>
+        <div style={{ flex:1,background:"var(--bg-card)",border:"1px solid #92400e",borderRadius:10,padding:"8px" }}>
           <div style={{ fontSize:9,color:"#fb923c",fontWeight:700,textTransform:"uppercase" as const }}>📈 Pic</div>
           <div style={{ fontSize:14,fontWeight:700,color:"#fb923c",fontFamily:"'Bebas Neue',cursive",marginTop:2 }}>{fmtTime(peak.atMs)}</div>
           <div style={{ fontSize:9,color:"#6b7280" }}>{peak.bac.toFixed(3)}‰</div>
@@ -141,10 +141,10 @@ export default function DrinkTab({ myMember, samMember, onAddDrink, onUndo }: an
   const previewBACAdd = base && selectedVol ? parseFloat((previewAlcG / (myMember.weight_kg * (myMember.sex === "M" ? 0.68 : 0.55) * 10)).toFixed(3)) : 0
 
   const S: any = {
-    cat: (a: boolean) => ({ padding:"6px 12px",borderRadius:20,border:"none",cursor:"pointer",background:a?"linear-gradient(135deg,#a855f7,#ec4899)":"#1e1e2e",color:a?"#fff":"#6b7280",fontSize:11,fontWeight:a?700:400,whiteSpace:"nowrap" }),
-    base: (a: boolean, c: string) => ({ padding:"10px 8px",borderRadius:11,border:"none",cursor:"pointer",background:a?`linear-gradient(135deg,${c}35,${c}18)`:"#1e1e2e",outline:a?`2px solid ${c}`:"2px solid transparent",textAlign:"left",display:"flex",flexDirection:"column",gap:3,transition:"all .15s" }),
-    vol: (a: boolean) => ({ flex:1,padding:"9px 4px",borderRadius:10,border:"none",cursor:"pointer",background:a?"linear-gradient(135deg,#a855f720,#ec489920)":"#1e1e2e",outline:a?"2px solid #a855f7":"2px solid transparent",color:"#e2e8f0",fontSize:12,fontWeight:a?700:400 }),
-    mix: (a: boolean) => ({ padding:"6px 12px",borderRadius:20,border:"none",cursor:"pointer",background:a?"#3b1f6a":"#1e1e2e",outline:a?"2px solid #a855f7":"2px solid transparent",color:a?"#c084fc":"#6b7280",fontSize:11,fontWeight:a?700:400,whiteSpace:"nowrap" }),
+    cat: (a: boolean) => ({ padding:"6px 12px",borderRadius:20,border:"none",cursor:"pointer",background:a?"linear-gradient(135deg,#a855f7,#ec4899)":"var(--border)",color:a?"#fff":"#6b7280",fontSize:11,fontWeight:a?700:400,whiteSpace:"nowrap" }),
+    base: (a: boolean, c: string) => ({ padding:"10px 8px",borderRadius:11,border:"none",cursor:"pointer",background:a?`linear-gradient(135deg,${c}35,${c}18)`:"var(--border)",outline:a?`2px solid ${c}`:"2px solid transparent",textAlign:"left",display:"flex",flexDirection:"column",gap:3,transition:"all .15s" }),
+    vol: (a: boolean) => ({ flex:1,padding:"9px 4px",borderRadius:10,border:"none",cursor:"pointer",background:a?"linear-gradient(135deg,#a855f720,#ec489920)":"var(--border)",outline:a?"2px solid #a855f7":"2px solid transparent",color:"#e2e8f0",fontSize:12,fontWeight:a?700:400 }),
+    mix: (a: boolean) => ({ padding:"6px 12px",borderRadius:20,border:"none",cursor:"pointer",background:a?"#3b1f6a":"var(--border)",outline:a?"2px solid #a855f7":"2px solid transparent",color:a?"var(--accent)":"#6b7280",fontSize:11,fontWeight:a?700:400,whiteSpace:"nowrap" }),
   }
 
   return (
@@ -158,7 +158,7 @@ export default function DrinkTab({ myMember, samMember, onAddDrink, onUndo }: an
             <div style={{ fontSize:12,color:st.color }}>{isSam ? "🚗 SAM · " : ""}{st.label}</div>
           </div>
           <div style={{ textAlign:"right" }}>
-            <div style={{ fontSize:22,fontWeight:700,color:"#c084fc",fontFamily:"'Bebas Neue',cursive" }}>{dist.toFixed(1)}m</div>
+            <div style={{ fontSize:22,fontWeight:700,color:"var(--accent)",fontFamily:"'Bebas Neue',cursive" }}>{dist.toFixed(1)}m</div>
             <div style={{ fontSize:9,color:"#6b7280" }}>{myMember.drinks.length} verre{myMember.drinks.length > 1 ? "s" : ""}</div>
           </div>
         </div>
@@ -170,7 +170,7 @@ export default function DrinkTab({ myMember, samMember, onAddDrink, onUndo }: an
             <span style={{ fontSize:12,fontWeight:700,color:samLocked?"#f87171":"#4ade80" }}>{samLocked?"🔒 LIMITE ATTEINTE !":"🚗 SAM — Limite légale"}</span>
             <span style={{ fontSize:12,color:samLocked?"#f87171":"#4ade80",fontWeight:700 }}>{currentBAC.toFixed(3)}‰ / {samLimit}‰</span>
           </div>
-          <div style={{ height:8,borderRadius:4,background:"#1e1e2e",overflow:"hidden" }}>
+          <div style={{ height:8,borderRadius:4,background:"var(--border)",overflow:"hidden" }}>
             <div style={{ height:"100%",width:`${Math.min((currentBAC/samLimit)*100,100)}%`,background:samLocked?"#ef4444":"#4ade80",borderRadius:4,transition:"width .5s" }}/>
           </div>
         </div>
@@ -189,7 +189,7 @@ export default function DrinkTab({ myMember, samMember, onAddDrink, onUndo }: an
         </div>
 
         {/* Drink grid */}
-        <div style={{ background:"#13131f",borderRadius:16,padding:12,border:"1px solid #2a2a3e",marginBottom:12 }}>
+        <div style={{ background:"var(--bg-card)",borderRadius:16,padding:12,border:"1px solid #2a2a3e",marginBottom:12 }}>
           <div style={{ fontSize:11,fontWeight:700,color:"#6b7280",letterSpacing:1,textTransform:"uppercase" as const,marginBottom:10 }}>Choisis ta boisson</div>
           <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6 }}>
             {catBases.map(b => (
@@ -204,7 +204,7 @@ export default function DrinkTab({ myMember, samMember, onAddDrink, onUndo }: an
 
         {/* Volume */}
         {base && (
-          <div style={{ background:"#13131f",borderRadius:14,padding:12,border:"1px solid #2a2a3e",marginBottom:10 }}>
+          <div style={{ background:"var(--bg-card)",borderRadius:14,padding:12,border:"1px solid #2a2a3e",marginBottom:10 }}>
             <div style={{ fontSize:11,fontWeight:700,color:"#6b7280",letterSpacing:1,textTransform:"uppercase" as const,marginBottom:8 }}>Volume</div>
             <div style={{ display:"flex",gap:6,flexWrap:"wrap" as const }}>
               {base.volumes.map(v => <button key={v} onClick={() => setSelectedVol(v)} style={{ ...S.vol(selectedVol === v), minWidth:52 }}>{v}cl</button>)}
@@ -214,7 +214,7 @@ export default function DrinkTab({ myMember, samMember, onAddDrink, onUndo }: an
 
         {/* Mixer */}
         {base?.mixers && base.mixers.length > 1 && (
-          <div style={{ background:"#13131f",borderRadius:14,padding:12,border:"1px solid #2a2a3e",marginBottom:10 }}>
+          <div style={{ background:"var(--bg-card)",borderRadius:14,padding:12,border:"1px solid #2a2a3e",marginBottom:10 }}>
             <div style={{ fontSize:11,fontWeight:700,color:"#6b7280",letterSpacing:1,textTransform:"uppercase" as const,marginBottom:8 }}>Avec quoi ?</div>
             <div style={{ display:"flex",gap:6,flexWrap:"wrap" as const }}>
               {base.mixers.map(m => <button key={m} onClick={() => setSelectedMixer(m)} style={S.mix(selectedMixer === m)}>{m}</button>)}
@@ -231,7 +231,7 @@ export default function DrinkTab({ myMember, samMember, onAddDrink, onUndo }: an
                 <div style={{ fontSize:10,color:"#6b7280",marginTop:2 }}>{base.degree_pct}% · {previewAlcG.toFixed(1)}g alcool</div>
               </div>
               <div style={{ textAlign:"right" }}>
-                <div style={{ fontSize:16,fontWeight:700,color:"#c084fc",fontFamily:"'Bebas Neue',cursive" }}>+{calcDistance(previewAlcG,selectedVol).toFixed(1)}m</div>
+                <div style={{ fontSize:16,fontWeight:700,color:"var(--accent)",fontFamily:"'Bebas Neue',cursive" }}>+{calcDistance(previewAlcG,selectedVol).toFixed(1)}m</div>
                 <div style={{ fontSize:10,color:"#f87171" }}>+{previewBACAdd.toFixed(3)}‰</div>
               </div>
             </div>
@@ -243,10 +243,10 @@ export default function DrinkTab({ myMember, samMember, onAddDrink, onUndo }: an
 
         {/* History */}
         {myMember.drinks.length > 0 && (
-          <div style={{ background:"#13131f",borderRadius:12,padding:12,border:"1px solid #2a2a3e" }}>
+          <div style={{ background:"var(--bg-card)",borderRadius:12,padding:12,border:"1px solid #2a2a3e" }}>
             <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8 }}>
               <span style={{ fontSize:11,fontWeight:700,color:"#6b7280",letterSpacing:1,textTransform:"uppercase" as const }}>Historique</span>
-              <button onClick={onUndo} style={{ background:"#1e1e2e",border:"1px solid #2a2a3e",borderRadius:8,color:"#9ca3af",fontSize:10,padding:"3px 8px",cursor:"pointer" }}>↩ Annuler</button>
+              <button onClick={onUndo} style={{ background:"var(--border)",border:"1px solid #2a2a3e",borderRadius:8,color:"#9ca3af",fontSize:10,padding:"3px 8px",cursor:"pointer" }}>↩ Annuler</button>
             </div>
             {[...myMember.drinks].reverse().slice(0, 8).map((d: DrinkEntry, i: number) => (
               <div key={d.id || i} style={{ display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:i < 7 ? "1px solid #1e1e2e" : "none" }}>
