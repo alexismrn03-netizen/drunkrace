@@ -231,6 +231,7 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
   const [isRolling, setIsRolling] = useState(false)
   const valRef = useRef<{[key:string]:number}>({}) // locked values per userId
   const isRollingRef = useRef(false)
+  const dieDisplayRef = useRef(1) // ref pour éviter le stale state pendant animation
   const [dieDisplayValue, setDieDisplayValue] = useState(1)
   // Keep myValRef for invite mode compat
   const myValRef = useRef<number>(0)
@@ -323,6 +324,7 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
     valRef.current[userId] = val // locked per userId, never overwritten by other players
     playDiceSound()
     setIsRolling(true)
+    dieDisplayRef.current = val
     setDieDisplayValue(val)
     // Animation 2.3s
     await new Promise(r => setTimeout(r, 2300))
@@ -331,11 +333,13 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
     await new Promise(r => setTimeout(r, 1500))
     // Read from per-player ref — guaranteed to be the right value
     const lockedVal = valRef.current[userId]
+    // Snapshot des playerIds AVANT le setState pour éviter closure stale
+    const playerIds = gamePlayers.map(p => p.userId)
     setPlayerRolls(prev => {
       const next = { ...prev, [userId]: lockedVal }
-      const allDone = gamePlayers.every(p => next[p.userId] != null)
+      const allDone = playerIds.every(id => next[id] != null)
       if (allDone) {
-        setTimeout(() => computeResult(next, gamePlayers.map(p => p.userId)), 300)
+        setTimeout(() => computeResult(next, playerIds), 300)
       } else {
         setLocalTurn(t => t + 1)
       }
@@ -352,6 +356,7 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
     isRollingRef.current = true
     playDiceSound()
     setIsRolling(true)
+    dieDisplayRef.current = val
     setDieDisplayValue(val) // tell die which face to land on
     // Animation: 2.3s
     await new Promise(r => setTimeout(r, 2300))
@@ -462,10 +467,6 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
   if (phase === "rolling" && mode === "local") {
     const currentPlayer = gamePlayers[localTurn < gamePlayers.length ? localTurn : gamePlayers.length - 1]
     const allDone = gamePlayers.every(p => playerRolls[p.userId] != null)
-    // Si tous ont joué → déclencher le résultat
-    if (allDone && phase === "rolling") {
-      setTimeout(() => computeResult(playerRolls, gamePlayers.map(p => p.userId)), 100)
-    }
     const currentRoll = playerRolls[currentPlayer?.userId]
     const currentRolling = isRolling && currentRoll == null
 
@@ -481,7 +482,7 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
                 {currentPlayer?.name}
               </div>
               <button onClick={()=>rollLocal(currentPlayer?.userId)} disabled={isRolling} style={{ background:"none", border:"none", cursor:"pointer", padding:0 }}>
-                <Dice3D value={isRolling ? dieDisplayValue : (valRef.current[currentPlayer?.userId] || currentRoll || dieDisplayValue || 1)} rolling={currentRolling} size={130}/>
+                <Dice3D value={isRolling ? dieDisplayRef.current : (valRef.current[currentPlayer?.userId] || currentRoll || dieDisplayRef.current || 1)} rolling={currentRolling} size={130}/>
               </button>
               {!isRolling && currentRoll == null && (
                 <button onClick={()=>rollLocal(currentPlayer?.userId)}
