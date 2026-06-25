@@ -6,7 +6,7 @@ import AvatarEditor from "@/components/AvatarEditor"
 
 const S = {
   wrap: { minHeight:"100vh",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",padding:24 },
-  input: { width:"100%",padding:"12px 14px",borderRadius:12,background:"#1e1e2e",border:"1px solid #2a2a3e",color:"#e2e8f0",fontSize:14,fontFamily:"'Space Grotesk',sans-serif",outline:"none",boxSizing:"border-box" as const,marginBottom:12 },
+  input: { width:"100%",padding:"12px 14px",borderRadius:12,background:"var(--border)",border:"1px solid #2a2a3e",color:"#e2e8f0",fontSize:14,fontFamily:"'Space Grotesk',sans-serif",outline:"none",boxSizing:"border-box" as const,marginBottom:12 },
   label: { display:"block",fontSize:11,color:"#9ca3af",marginBottom:6,fontWeight:700 as const,letterSpacing:1,textTransform:"uppercase" as const },
   btn: { width:"100%",padding:"14px",borderRadius:14,border:"none",cursor:"pointer",background:"linear-gradient(135deg,#a855f7,#ec4899)",color:"#fff",fontSize:15,fontWeight:700,fontFamily:"'Space Grotesk',sans-serif" },
 }
@@ -46,16 +46,16 @@ export default function ProfileSetup({ user, onDone }: { user: any, onDone: () =
       <div style={{ width:"100%",maxWidth:360 }}>
         {/* Avatar */}
         {editAvatar && <AvatarEditor initial={avatarCfg} onSave={setAvatarCfg} onClose={()=>setEditAvatar(false)}/>}
-        <div style={{ background:"#13131f",border:"1px solid #2a2a3e",borderRadius:16,padding:14,marginBottom:12,textAlign:"center" as const }}>
+        <div style={{ background:"var(--bg-card)",border:"1px solid #2a2a3e",borderRadius:16,padding:14,marginBottom:12,textAlign:"center" as const }}>
           <label style={S.label}>Avatar</label>
           <DrunkAvatar config={avatarCfg} bac={0} size={80} animate={false}/>
           <br/>
-          <button onClick={()=>setEditAvatar(true)} style={{ background:"#1e1e2e",border:"1px solid #3b1f6a",borderRadius:12,padding:"8px 20px",color:"#c084fc",fontSize:13,fontWeight:700,cursor:"pointer",marginTop:8 }}>
+          <button onClick={()=>setEditAvatar(true)} style={{ background:"var(--border)",border:"1px solid #3b1f6a",borderRadius:12,padding:"8px 20px",color:"var(--accent)",fontSize:13,fontWeight:700,cursor:"pointer",marginTop:8 }}>
             🎨 Personnaliser
           </button>
         </div>
 
-        <div style={{ background:"#13131f",border:"1px solid #2a2a3e",borderRadius:16,padding:16,marginBottom:12 }}>
+        <div style={{ background:"var(--bg-card)",border:"1px solid #2a2a3e",borderRadius:16,padding:16,marginBottom:12 }}>
           <label style={S.label}>Pseudo</label>
           <input style={S.input} value={pseudo} onChange={e=>setPseudo(e.target.value)} placeholder="Ton surnom de soirée" maxLength={20} />
 
@@ -65,7 +65,7 @@ export default function ProfileSetup({ user, onDone }: { user: any, onDone: () =
           <label style={S.label}>Sexe biologique</label>
           <div style={{ display:"flex",gap:8 }}>
             {[{v:"M",l:"👨 Homme"},{v:"F",l:"👩 Femme"}].map(s=>(
-              <button key={s.v} onClick={()=>setSex(s.v)} style={{ flex:1,padding:"11px",borderRadius:10,border:"none",cursor:"pointer",background:sex===s.v?"linear-gradient(135deg,#a855f720,#ec489920)":"#1e1e2e",outline:sex===s.v?"2px solid #a855f7":"2px solid transparent",color:"#e2e8f0",fontSize:13,fontFamily:"'Space Grotesk',sans-serif",fontWeight:sex===s.v?700:400 }}>
+              <button key={s.v} onClick={()=>setSex(s.v)} style={{ flex:1,padding:"11px",borderRadius:10,border:"none",cursor:"pointer",background:sex===s.v?"linear-gradient(135deg,#a855f720,#ec489920)":"var(--border)",outline:sex===s.v?"2px solid #a855f7":"2px solid transparent",color:"#e2e8f0",fontSize:13,fontFamily:"'Space Grotesk',sans-serif",fontWeight:sex===s.v?700:400 }}>
                 {s.l}
               </button>
             ))}
