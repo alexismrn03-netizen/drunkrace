@@ -137,7 +137,8 @@ interface Marble {
 interface Props {members:any[];onClose:()=>void}
 
 export default function MarbleRace({members,onClose}:Props) {
-  const [nPlayers,setNPlayers]=useState(Math.min(members.length,4))
+  const activePlayers = members.filter((m:any) => !m.is_sam)
+  const [selectedIds,setSelectedIds]=useState<string[]>(activePlayers.slice(0,Math.min(activePlayers.length,4)).map((m:any)=>m.user_id))
   const [picks,setPicks]=useState<Record<number,number>>({})
   const [phase,setPhase]=useState<"setup"|"colors"|"countdown"|"racing"|"finished">("setup")
   const [lp,setLp]=useState("waiting") // light phase
@@ -162,9 +163,10 @@ export default function MarbleRace({members,onClose}:Props) {
     return{...b,d,wx:px+nx*b.off,wy:py+ny*b.off}
   })
 
-  const players=members.slice(0,nPlayers).map((m,i)=>({
-    id:i,name:m.pseudo||`J${i+1}`,colorIdx:picks[i]??i
-  }))
+  const players=selectedIds.map((uid,i)=>{
+    const m=members.find((x:any)=>x.user_id===uid)||({}as any)
+    return{id:i,name:m.pseudo||`J${i+1}`,colorIdx:picks[i]??i}
+  })
 
   const BASE=7.5 // px/frame base speed
 
@@ -290,31 +292,46 @@ export default function MarbleRace({members,onClose}:Props) {
         </div>
         <div style={{background:"#13131f",borderRadius:14,padding:14,border:"1px solid #2a2a3e",marginBottom:14}}>
           <div style={{fontSize:11,fontWeight:700,color:"#6b7280",letterSpacing:1,textTransform:"uppercase"as const,marginBottom:10}}>
-            Joueurs ({nPlayers})
+            Joueurs ({selectedIds.length}/6)
           </div>
-          <div style={{display:"flex",gap:8,marginBottom:12}}>
-            {[2,3,4,5,6].filter(n=>n<=members.length).map(n=>(
-              <button key={n} onClick={()=>setNPlayers(n)}
-                style={{flex:1,padding:"9px",borderRadius:10,border:"none",cursor:"pointer",
-                  background:nPlayers===n?"linear-gradient(135deg,#ef4444,#b91c1c)":"#1e1e2e",
-                  color:nPlayers===n?"#fff":"#6b7280",fontWeight:700,fontSize:15}}>{n}</button>
-            ))}
-          </div>
-          {players.map(p=>(
-            <div key={p.id} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:"1px solid #1a1a2a"}}>
-              <div style={{width:15,height:15,borderRadius:"50%",background:MARBLE_COLORS[p.colorIdx].color}}/>
-              <span style={{fontSize:13,color:"#e2e8f0"}}>{p.name}</span>
-            </div>
-          ))}
+          {activePlayers.map((m:any,i:number)=>{
+            const sel=selectedIds.includes(m.user_id)
+            const idx=selectedIds.indexOf(m.user_id)
+            const color=sel?MARBLE_COLORS[picks[idx]??idx]?.color||"#a855f7":"#2a2a3e"
+            return(
+              <button key={m.user_id} onClick={()=>{
+                if(sel){
+                  if(selectedIds.length<=2)return // min 2
+                  setSelectedIds(s=>s.filter(x=>x!==m.user_id))
+                  setPicks({}) // reset picks quand on change les joueurs
+                } else {
+                  if(selectedIds.length>=6)return // max 6
+                  setSelectedIds(s=>[...s,m.user_id])
+                  setPicks({})
+                }
+              }}
+                style={{display:"flex",alignItems:"center",gap:12,padding:"11px 12px",
+                  borderRadius:12,border:"none",cursor:"pointer",width:"100%",marginBottom:8,
+                  background:sel?`${color}18`:"#1e1e2e",
+                  outline:sel?`2px solid ${color}`:"2px solid transparent"}}>
+                <div style={{width:14,height:14,borderRadius:"50%",background:sel?color:"#374151",flexShrink:0}}/>
+                <span style={{fontSize:13,fontWeight:600,color:"#e2e8f0",flex:1,textAlign:"left"as const}}>{m.pseudo}</span>
+                {sel&&<span style={{fontSize:11,color,fontWeight:700}}>✓</span>}
+              </button>
+            )
+          })}
         </div>
         <div style={{background:"#13131f",borderRadius:14,padding:12,border:"1px solid #2a2a3e",marginBottom:18,
           fontSize:12,color:"#6b7280",lineHeight:1.7}}>
           ⬇️ Piste en descente · 🔵 Boosts · 🟠 Cônes · 💧 Flaques · ⬛ Dos d'âne
         </div>
-        <button onClick={()=>setPhase("colors")}
-          style={{width:"100%",padding:"16px",borderRadius:14,border:"none",cursor:"pointer",
-            background:"linear-gradient(135deg,#ef4444,#b91c1c)",color:"#fff",fontSize:17,fontWeight:700}}>
-          Choisir les couleurs →
+        <button onClick={()=>{ if(selectedIds.length>=2) setPhase("colors") }}
+          disabled={selectedIds.length<2}
+          style={{width:"100%",padding:"16px",borderRadius:14,border:"none",
+            cursor:selectedIds.length>=2?"pointer":"not-allowed",
+            background:selectedIds.length>=2?"linear-gradient(135deg,#ef4444,#b91c1c)":"#2a2a3e",
+            color:selectedIds.length>=2?"#fff":"#4b5563",fontSize:17,fontWeight:700}}>
+          {selectedIds.length>=2?"Choisir les couleurs →":"Sélectionne au moins 2 joueurs"}
         </button>
       </div>
     </div>
