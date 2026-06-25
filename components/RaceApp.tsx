@@ -499,7 +499,7 @@ function TabBar({ active, onChange, accentColor }: {active:string, onChange:(t:s
   return (
     <div style={{display:"flex",position:"fixed",bottom:0,left:0,right:0,background:"#0a0a14",borderTop:"1px solid #1a1a2a",zIndex:1000,paddingBottom:"env(safe-area-inset-bottom, 0px)",height:85}}>
       {tabs.map(t=>(
-        <button key={t.id} onClick={()=>onChange(t.id)} style={{flex:1,padding:"12px 0 8px",background:"none",border:"none",color:active===t.id?"#c084fc":"#4b5563",fontSize:10,fontWeight:active===t.id?700:400,cursor:"pointer",display:"flex",flexDirection:"column" as const,alignItems:"center",gap:2,minWidth:0,overflow:"hidden"}}>
+        <button key={t.id} onClick={()=>onChange(t.id)} style={{flex:1,padding:"12px 0 8px",background:"none",border:"none",color:active===t.id?accentColor:"#4b5563",fontSize:10,fontWeight:active===t.id?700:400,cursor:"pointer",display:"flex",flexDirection:"column" as const,alignItems:"center",gap:2,minWidth:0,overflow:"hidden"}}>
           <span style={{fontSize:22,lineHeight:1}}>{t.label.split(" ")[0]}</span>
           <span style={{whiteSpace:"nowrap" as const,overflow:"hidden",textOverflow:"ellipsis",width:"100%",textAlign:"center" as const,paddingInline:1}}>{t.label.split(" ").slice(1).join(" ")}</span>
         </button>
