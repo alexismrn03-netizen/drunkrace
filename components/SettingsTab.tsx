@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect, useRef, useCallback } from "react"
-import { THEMES, getSavedTheme, saveTheme, getSavedVolume, saveVolume, getSavedMuted, saveMuted, type ThemeId } from "@/lib/theme"
+import { THEMES, getSavedVolume, saveVolume, getSavedMuted, saveMuted, type ThemeId } from "@/lib/theme"
+import { useTheme } from "@/lib/ThemeContext"
 import { startAmbiance, setAmbianceVolume, isAmbiancePlaying } from "@/lib/ambiance"
 
 interface Props {
@@ -67,8 +68,7 @@ export default function SettingsTab({ onThemeChange }: Props) {
   }, [dragging, getVolFromEvent])
 
   const handleTheme = (id: ThemeId) => {
-    setTheme(id)
-    saveTheme(id)
+    setGlobalTheme(id)
     onThemeChange(id)
   }
 
