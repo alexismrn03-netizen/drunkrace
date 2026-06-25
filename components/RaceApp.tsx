@@ -515,19 +515,16 @@ function RaceAppInner({ user, profile, group, onLeave, onProfileUpdate }: any) {
   const audioStarted = useRef(false)
 
   // Démarrer la musique dès le premier tap utilisateur
-  // (iOS interdit l'audio sans interaction utilisateur)
   useEffect(() => {
-    const startOnTap = () => {
+    const startOnTap = async () => {
       if (audioStarted.current) return
       audioStarted.current = true
-      const { getSavedVolume, getSavedMuted } = require("@/lib/theme")
       const vol = getSavedVolume()
       const muted = getSavedMuted()
       if (!muted) {
-        import("@/lib/ambiance").then(({ startAmbiance }) => startAmbiance(vol))
+        const { startAmbiance } = await import("@/lib/ambiance")
+        startAmbiance(vol)
       }
-      window.removeEventListener("touchstart", startOnTap)
-      window.removeEventListener("click", startOnTap)
     }
     window.addEventListener("touchstart", startOnTap, { once: true })
     window.addEventListener("click", startOnTap, { once: true })
