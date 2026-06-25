@@ -9,13 +9,13 @@ interface Props {
 }
 
 export default function SettingsTab({ onThemeChange }: Props) {
-  const [theme, setTheme] = useState<ThemeId>(() => getSavedTheme())
+  const { themeId: theme, T: contextT, setTheme: setGlobalTheme } = useTheme()
   const [volume, setVolume] = useState(() => getSavedVolume())
   const [muted, setMuted] = useState(() => getSavedMuted())
   const [dragging, setDragging] = useState(false)
   const trackRef = useRef<HTMLDivElement>(null)
 
-  const T = THEMES[theme]
+  const T = contextT
 
   // Démarrer l'ambiance au montage
   useEffect(() => {
