@@ -1,5 +1,8 @@
 "use client"
 import { useState, useEffect, useRef, useCallback } from "react"
+import { THEMES, getSavedTheme, type ThemeId } from "@/lib/theme"
+import { startAmbiance, stopAmbiance, setAmbianceVolume } from "@/lib/ambiance"
+import SettingsTab from "./SettingsTab"
 import { createClient } from "@/lib/supabase"
 import { DRINK_BASES, alcoholGrams, serializeDrink, calcCurrentBAC, calcPeak, calcSoberTime, getBACStatus, fmtTime, calcDistance, ELIM_RATE, type DrinkEntry } from "@/lib/drinks"
 import { parseDrinksLog } from "@/lib/memberUtils"
@@ -491,7 +494,7 @@ function ProfileTab({ myMember, user, group, onUpdate, onShowGlobal }: any) {
 }
 
 // ── TAB BAR ──────────────────────────────────────────────────────────────────
-function TabBar({ active, onChange }: {active:string, onChange:(t:string)=>void}) {
+function TabBar({ active, onChange, accentColor }: {active:string, onChange:(t:string)=>void, accentColor:string}) {
   const tabs=[{id:"race",label:"🏁 Piste"},{id:"drink",label:"🍺 Boire"},{id:"games",label:"🎮 Jeux"},{id:"stats",label:"📊 Stats"},{id:"profile",label:"👤 Profil"},{id:"settings",label:"⚙️ Réglages"}]
   return (
     <div style={{display:"flex",position:"fixed",bottom:0,left:0,right:0,background:"#0a0a14",borderTop:"1px solid #1a1a2a",zIndex:1000,paddingBottom:"env(safe-area-inset-bottom, 0px)",height:85}}>
@@ -506,22 +509,6 @@ function TabBar({ active, onChange }: {active:string, onChange:(t:string)=>void}
 }
 
 // ── MAIN RACE APP ─────────────────────────────────────────────────────────────
-
-// ── SETTINGS TAB ─────────────────────────────────────────────────────────────
-function SettingsTab() {
-  return (
-    <div style={{ padding: "24px 16px 100px", display: "flex", flexDirection: "column" as const, gap: 16 }}>
-      <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 26, letterSpacing: 3, background: "linear-gradient(135deg,#c084fc,#ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-        ⚙️ RÉGLAGES
-      </div>
-
-      {/* A compléter */}
-      <div style={{ background: "#13131f", borderRadius: 14, padding: 16, border: "1px solid #2a2a3e", color: "#6b7280", fontSize: 13 }}>
-        Les réglages arrivent bientôt 🚀
-      </div>
-    </div>
-  )
-}
 
 export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate }: any) {
   const [tab, setTab]           = useState("race")
@@ -732,7 +719,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
       {tab==="games"   && <GamesTab members={members} myUserId={user.id} groupId={group.id} onAwardDistance={handleAwardSimple} onAwardDrink={handleAwardDistance}/>}
       {tab==="stats"   && <StatsTab myMember={myMember} members={members} samMember={samMember} events={events}/>}
       {tab==="photo"   && <PhotoTab groupId={group.id} userId={user.id}/>}
-      {tab==="settings" && <SettingsTab />}
+      {tab==="settings" && <SettingsTab onThemeChange={id => setThemeId(id)} />}
       {tab==="profile" && <ProfileTab myMember={myMember} user={user} group={group} onUpdate={(p:any)=>{setMembers(prev=>prev.map(m=>m.isMe?{...m,...p}:m));onProfileUpdate()}} onShowGlobal={()=>setShowGlobalProfile(true)}/>}
       {/* Notification permission modal */}
       {showNotifModal && (
@@ -765,7 +752,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
       )}
 
       <BeDrunkController groupId={group.id} myUserId={user.id} myPseudo={myMember?.pseudo||""} members={members} isCreator={isCreator}/>
-      <TabBar active={tab} onChange={setTab}/>
+      <TabBar active={tab} onChange={setTab} accentColor={T.accent}/>
       {/* Incoming invite banner */}
       {incomingDice && !showDice && (
         <div style={{position:"fixed",top:0,left:0,right:0,zIndex:500,background:"linear-gradient(135deg,#92400e,#78350f)",padding:"14px 16px",display:"flex",alignItems:"center",gap:12}}>
