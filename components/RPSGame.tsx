@@ -457,10 +457,25 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
             </div>
           </div>
         </div>
-        <button onClick={applyAndClose}
-          style={{ width:"100%", maxWidth:340, padding:"15px", borderRadius:14, border:"none", cursor:"pointer", background:"linear-gradient(135deg,#a855f7,#ec4899)", color:"#fff", fontSize:15, fontWeight:700 }}>
-          ✅ Appliquer et fermer
-        </button>
+        <div style={{ display:"flex", gap:10, width:"100%", maxWidth:340 }}>
+          <button onClick={() => {
+            setPhase("invite")
+            setMyChoice(null)
+            setOpponentChoice(null)
+            setResult(null)
+            setTargetUserId("")
+            setInviteId("")
+            setModeSelected(null)
+            setLocalTieCount(0)
+          }}
+            style={{ flex:1, padding:"14px", borderRadius:14, border:"1px solid #2a2a3e", cursor:"pointer", background:"#13131f", color:"#9ca3af", fontSize:14, fontWeight:700 }}>
+            🔄 Rejouer
+          </button>
+          <button onClick={applyAndClose}
+            style={{ flex:1, padding:"14px", borderRadius:14, border:"none", cursor:"pointer", background:"linear-gradient(135deg,#a855f7,#ec4899)", color:"#fff", fontSize:14, fontWeight:700 }}>
+            ✅ Appliquer
+          </button>
+        </div>
         <style>{`@keyframes popIn{0%{transform:scale(0.3);opacity:0}70%{transform:scale(1.2)}100%{transform:scale(1);opacity:1}}`}</style>
       </div>
     )
