@@ -45,7 +45,7 @@ export default function Dashboard({ user }: { user: any }) {
 
   if (loading) return (
     <div style={{ display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh" }}>
-      <div style={{ fontFamily:"'Bebas Neue',cursive",fontSize:28,letterSpacing:3,color:"#c084fc" }}>CHARGEMENT…</div>
+      <div style={{ fontFamily:"'Bebas Neue',cursive",fontSize:28,letterSpacing:3,color:"var(--accent)" }}>CHARGEMENT…</div>
     </div>
   )
 
