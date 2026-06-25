@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { ThemeProvider, useTheme } from "@/lib/ThemeContext"
+import { getSavedVolume, getSavedMuted } from "@/lib/theme"
 import SettingsTab from "./SettingsTab"
 import { createClient } from "@/lib/supabase"
 import { DRINK_BASES, alcoholGrams, serializeDrink, calcCurrentBAC, calcPeak, calcSoberTime, getBACStatus, fmtTime, calcDistance, ELIM_RATE, type DrinkEntry } from "@/lib/drinks"
