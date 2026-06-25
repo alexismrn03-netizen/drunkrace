@@ -1,12 +1,24 @@
+:root {
+  --accent: #c084fc;
+  --accent2: #ec4899;
+  --bg: #0a0a14;
+  --bg-card: #13131f;
+  --bg-nav: #0a0a14;
+  --border: #1e1e2e;
+  --accent-grad: linear-gradient(135deg, #c084fc, #ec4899);
+  --text-muted: #6b7280;
+  --glow: #a855f7;
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { height: 100%; }
 body {
   font-family: 'Space Grotesk', sans-serif;
-  background: #0a0a14;
+  background: var(--bg);
   color: #e2e8f0;
   height: 100%;
-  /* Prevent content from going under tab bar */
   padding-bottom: env(safe-area-inset-bottom, 0px);
+  transition: background 0.3s ease;
 }
 ::-webkit-scrollbar { display: none; }
 input::-webkit-inner-spin-button { -webkit-appearance: none; }
