@@ -361,7 +361,10 @@ export default function BlindTest({ members, myUserId, onAwardDistance, onClose 
   const [fastestTime, setFastestTime] = useState<number | null>(null)
   const [startTime, setStartTime] = useState<number>(0)
   const [distributeTarget, setDistributeTarget] = useState<string | null>(null)
+  const [ytId, setYtId] = useState<string>("")
+  const [loadingYt, setLoadingYt] = useState(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const iframeRef = useRef<HTMLIFrameElement | null>(null)
 
   const q = questions[qIndex]
   const isMe = myUserId === myUserId // toujours true — on garde local pour l'instant
@@ -377,15 +380,23 @@ export default function BlindTest({ members, myUserId, onAwardDistance, onClose 
     launchQuestion(picked[0])
   }
 
-  const launchQuestion = (question: any) => {
-    // Mélanger les 4 choix
+  const launchQuestion = async (question: any) => {
     const allChoices = shuffle([question.artist, ...question.wrong])
     setChoices(allChoices)
     setSelected(null)
     setFastest(null)
     setFastestTime(null)
+    setYtId("")
     setTimeLeft(20)
     setStartTime(Date.now())
+    // Charger l'ID YouTube
+    setLoadingYt(true)
+    try {
+      const res = await fetch(`/api/youtube-search?q=${encodeURIComponent(question.title + ' ' + question.artist + ' official audio')}`)
+      const data = await res.json()
+      setYtId(data.id || "")
+    } catch {}
+    setLoadingYt(false)
   }
 
   // Timer
@@ -527,6 +538,18 @@ export default function BlindTest({ members, myUserId, onAwardDistance, onClose 
               <div key={i} style={{ width:5, borderRadius:3, background:"linear-gradient(to top,#a855f7,#ec4899)", height:h, animation:`eq ${0.3+i*0.05}s ease-in-out infinite alternate`, opacity:0.8 }}/>
             ))}
           </div>
+          {/* Player YouTube caché — audio uniquement */}
+          {ytId && (
+            <iframe
+              ref={iframeRef}
+              src={`https://www.youtube.com/embed/${ytId}?autoplay=1&controls=0&start=30&mute=0`}
+              style={{ width:1, height:1, opacity:0, pointerEvents:"none", position:"absolute" }}
+              allow="autoplay"
+            />
+          )}
+          {loadingYt && (
+            <div style={{ fontSize:11, color:"#4b5563", letterSpacing:1 }}>🎵 Chargement...</div>
+          )}
         </div>
 
         {/* Titre chanson (caché) */}
