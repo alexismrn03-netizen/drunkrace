@@ -515,15 +515,6 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
   const [tab, setTab]           = useState("race")
 
   // Check if we should show notif permission modal (first time only)
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    if (!("Notification" in window)) return
-    if (localStorage.getItem("notif_asked")) return
-    if (Notification.permission !== "default") return
-    // Show our custom modal after 3 seconds
-    const t = setTimeout(() => setShowNotifModal(true), 3000)
-    return () => clearTimeout(t)
-  }, [])
 
 
 
