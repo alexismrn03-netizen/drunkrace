@@ -527,10 +527,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
 
 
 
-  const handleNotifDecline = () => {
-    setShowNotifModal(false)
-    localStorage.setItem("notif_asked", "1")
-  }
+  
   const [members, setMembers]   = useState<any[]>([])
   const [events, setEvents]     = useState<any[]>([])
   const [showWheel, setShowWheel]   = useState(false)
@@ -702,26 +699,11 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
       {tab==="drink"   && <DrinkTab myMember={myMember} samMember={samMember} onAddDrink={handleAddDrink} onUndo={handleUndo}/>}
       {tab==="games"   && <GamesTab members={members} myUserId={user.id} groupId={group.id} onAwardDistance={handleAwardSimple} onAwardDrink={handleAwardDistance}/>}
       {tab==="stats"   && <StatsTab myMember={myMember} members={members} samMember={samMember} events={events}/>}
-      {tab==="photo"   && <PhotoTab groupId={group.id} userId={user.id}/>}
       {tab==="settings" && <SettingsTab onThemeChange={id => setThemeId(id)} />}
       {tab==="profile" && <ProfileTab myMember={myMember} user={user} group={group} onUpdate={(p:any)=>{setMembers(prev=>prev.map(m=>m.isMe?{...m,...p}:m));onProfileUpdate()}} onShowGlobal={()=>setShowGlobalProfile(true)}/>}
-      {/* Notification permission modal */}
-              style={{ width:"100%",padding:"14px",borderRadius:14,border:"none",
-                cursor:"pointer",background:"linear-gradient(135deg,#ec4899,#be185d)",
-                color:"#fff",fontSize:15,fontWeight:700,marginBottom:10 }}>
-              🔔 Activer les notifications
-            </button>
-            <button onClick={handleNotifDecline}
-              style={{ width:"100%",padding:"10px",borderRadius:14,border:"none",
-                cursor:"pointer",background:"none",color:"#6b7280",fontSize:13 }}>
-              Plus tard
-            </button>
-          </div>
-        </div>
-      )}
+      
 
-      <BeDrunkController groupId={group.id} myUserId={user.id} myPseudo={myMember?.pseudo||""} members={members} isCreator={isCreator}/>
-      <TabBar active={tab} onChange={setTab} accentColor={T.accent}/>
+            <TabBar active={tab} onChange={setTab} accentColor={T.accent}/>
       {/* Incoming invite banner */}
       {incomingDice && !showDice && (
         <div style={{position:"fixed",top:0,left:0,right:0,zIndex:500,background:"linear-gradient(135deg,#92400e,#78350f)",padding:"14px 16px",display:"flex",alignItems:"center",gap:12}}>
