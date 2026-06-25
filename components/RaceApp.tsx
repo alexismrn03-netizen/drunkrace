@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect, useRef, useCallback } from "react"
-import { THEMES, getSavedTheme, type ThemeId } from "@/lib/theme"
+import { ThemeProvider, useTheme } from "@/lib/ThemeContext"
 import SettingsTab from "./SettingsTab"
 import { createClient } from "@/lib/supabase"
 import { DRINK_BASES, alcoholGrams, serializeDrink, calcCurrentBAC, calcPeak, calcSoberTime, getBACStatus, fmtTime, calcDistance, ELIM_RATE, type DrinkEntry } from "@/lib/drinks"
@@ -509,9 +509,8 @@ function TabBar({ active, onChange, accentColor }: {active:string, onChange:(t:s
 
 // ── MAIN RACE APP ─────────────────────────────────────────────────────────────
 
-export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate }: any) {
-  const [themeId, setThemeId] = useState<ThemeId>(() => getSavedTheme())
-  const T = THEMES[themeId]
+function RaceAppInner({ user, profile, group, onLeave, onProfileUpdate }: any) {
+  const { T, setTheme } = useTheme()
   const [tab, setTab]           = useState("race")
 
   // Check if we should show notif permission modal (first time only)
@@ -690,7 +689,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
       {tab==="drink"   && <DrinkTab myMember={myMember} samMember={samMember} onAddDrink={handleAddDrink} onUndo={handleUndo}/>}
       {tab==="games"   && <GamesTab members={members} myUserId={user.id} groupId={group.id} onAwardDistance={handleAwardSimple} onAwardDrink={handleAwardDistance}/>}
       {tab==="stats"   && <StatsTab myMember={myMember} members={members} samMember={samMember} events={events}/>}
-      {tab==="settings" && <SettingsTab onThemeChange={id => setThemeId(id)} />}
+      {tab==="settings" && <SettingsTab onThemeChange={setTheme} />}
       {tab==="profile" && <ProfileTab myMember={myMember} user={user} group={group} onUpdate={(p:any)=>{setMembers(prev=>prev.map(m=>m.isMe?{...m,...p}:m));onProfileUpdate()}} onShowGlobal={()=>setShowGlobalProfile(true)}/>}
       
 
@@ -764,5 +763,13 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
       )}
       {incomingRPS&&<RPSGame members={members} myUserId={user.id} groupId={group.id} invite={incomingRPS} onAwardDistance={handleAwardSimple} onClose={()=>setIncomingRPS(null)}/>}
     </div>
+  )
+}
+
+export default function RaceApp(props: any) {
+  return (
+    <ThemeProvider>
+      <RaceAppInner {...props} />
+    </ThemeProvider>
   )
 }
