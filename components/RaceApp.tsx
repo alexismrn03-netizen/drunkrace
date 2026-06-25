@@ -511,6 +511,8 @@ function TabBar({ active, onChange, accentColor }: {active:string, onChange:(t:s
 // ── MAIN RACE APP ─────────────────────────────────────────────────────────────
 
 export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate }: any) {
+  const [themeId, setThemeId] = useState<ThemeId>(() => getSavedTheme())
+  const T = THEMES[themeId]
   const [tab, setTab]           = useState("race")
   const [showNotifModal, setShowNotifModal] = useState(false)
 
