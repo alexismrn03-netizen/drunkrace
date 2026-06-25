@@ -586,6 +586,8 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
           </div>
           <div style={{ display:"flex", gap:10 }}>
             {isTie&&<button onClick={startTiebreak} style={{ flex:1, padding:"13px", borderRadius:13, border:"none", cursor:"pointer", background:"linear-gradient(135deg,#f59e0b,#d97706)", color:"#fff", fontSize:14, fontWeight:700 }}>🎲 Relancer</button>}
+            <button onClick={() => { setPhase("setup"); setLosers([]); setTieRound(false); setPlayerRolls({}); setLocalTurn(0); setIsRolling(false); }}
+              style={{ flex:1, padding:"13px", borderRadius:13, border:"1px solid #2a2a3e", cursor:"pointer", background:"#13131f", color:"#9ca3af", fontSize:14, fontWeight:700 }}>🔄 Rejouer</button>
             <button onClick={applyAndClose} style={{ flex:2, padding:"13px", borderRadius:13, border:"none", cursor:"pointer", background:"linear-gradient(135deg,#a855f7,#ec4899)", color:"#fff", fontSize:14, fontWeight:700 }}>✅ Appliquer</button>
           </div>
         </div>
