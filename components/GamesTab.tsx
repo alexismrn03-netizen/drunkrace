@@ -130,6 +130,7 @@ export default function GamesTab({ members, myUserId, groupId, onAwardDistance, 
     <BlindTest
       members={members}
       myUserId={myUserId}
+      groupId={groupId}
       onAwardDistance={onAwardDistance}
       onClose={() => setActiveGame(null)}
     />
