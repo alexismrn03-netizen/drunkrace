@@ -513,7 +513,6 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
   const [themeId, setThemeId] = useState<ThemeId>(() => getSavedTheme())
   const T = THEMES[themeId]
   const [tab, setTab]           = useState("race")
-  const [showNotifModal, setShowNotifModal] = useState(false)
 
   // Check if we should show notif permission modal (first time only)
   useEffect(() => {
@@ -526,23 +525,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
     return () => clearTimeout(t)
   }, [])
 
-  const handleNotifAccept = async () => {
-    setShowNotifModal(false)
-    localStorage.setItem("notif_asked", "1")
-    try {
-      const { registerPush } = await import("@/lib/pushNotifications")
-      const perm = await Notification.requestPermission()
-      if (perm === "granted") {
-        const sub = await registerPush()
-        if (sub && user) {
-          await fetch("/api/push-subscribe", {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ subscription: sub, userId: user.id })
-          })
-        }
-      }
-    } catch(e) { console.error(e) }
-  }
+
 
   const handleNotifDecline = () => {
     setShowNotifModal(false)
@@ -723,21 +706,6 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
       {tab==="settings" && <SettingsTab onThemeChange={id => setThemeId(id)} />}
       {tab==="profile" && <ProfileTab myMember={myMember} user={user} group={group} onUpdate={(p:any)=>{setMembers(prev=>prev.map(m=>m.isMe?{...m,...p}:m));onProfileUpdate()}} onShowGlobal={()=>setShowGlobalProfile(true)}/>}
       {/* Notification permission modal */}
-      {showNotifModal && (
-        <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:900,
-          display:"flex",alignItems:"center",justifyContent:"center",padding:24 }}>
-          <div style={{ background:"#13131f",borderRadius:24,padding:28,maxWidth:320,
-            border:"1px solid #2a2a3e",textAlign:"center" as const }}>
-            <div style={{ fontSize:52,marginBottom:12 }}>🔔</div>
-            <div style={{ fontFamily:"'Bebas Neue',cursive",fontSize:26,letterSpacing:2,
-              color:"#e2e8f0",marginBottom:8 }}>ACTIVER LES NOTIFS</div>
-            <div style={{ fontSize:13,color:"#9ca3af",marginBottom:6,lineHeight:1.6 }}>
-              Reçois une alerte instantanée quand un <strong style={{color:"#ec4899"}}>BeDrunk</strong> est déclenché pendant la soirée.
-            </div>
-            <div style={{ fontSize:11,color:"#6b7280",marginBottom:24 }}>
-              📸 Ne rate plus jamais le moment !
-            </div>
-            <button onClick={handleNotifAccept}
               style={{ width:"100%",padding:"14px",borderRadius:14,border:"none",
                 cursor:"pointer",background:"linear-gradient(135deg,#ec4899,#be185d)",
                 color:"#fff",fontSize:15,fontWeight:700,marginBottom:10 }}>
