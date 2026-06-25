@@ -1,6 +1,8 @@
 "use client"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { createClient } from "@/lib/supabase"
+import { stopAmbiance, startAmbiance, isAmbiancePlaying } from "@/lib/ambiance"
+import { getSavedVolume, getSavedMuted } from "@/lib/theme"
 
 interface Props {
   members: any[]
@@ -365,6 +367,20 @@ export default function BlindTest({ members, myUserId, onAwardDistance, onClose 
   const [loadingYt, setLoadingYt] = useState(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
+  const wasPlaying = useRef(false)
+
+  // Stop ambiance au montage, relance à la fermeture
+  useEffect(() => {
+    wasPlaying.current = isAmbiancePlaying()
+    if (wasPlaying.current) stopAmbiance()
+    return () => {
+      if (wasPlaying.current) {
+        const vol = getSavedVolume()
+        const muted = getSavedMuted()
+        if (!muted) startAmbiance(vol)
+      }
+    }
+  }, [])
 
   const q = questions[qIndex]
   const isMe = myUserId === myUserId // toujours true — on garde local pour l'instant
