@@ -56,7 +56,7 @@ export default function GroupLobby({ user, profile, onJoinGroup, onProfileUpdate
       creator_id: user.id, creator_pseudo: profile.pseudo, status: "waiting"
     }).select().single()
     if (e) { setError(e.message); setLoading(false); return }
-    await supabase.from("group_members").insert({ group_id: data.id, user_id: user.id, color: "#a855f7", is_creator: true })
+    await supabase.from("group_members").insert({ group_id: data.id, user_id: user.id, color: "var(--accent)", is_creator: true })
     setNewGroup(data); setLoading(false)
   }
 
@@ -73,7 +73,7 @@ export default function GroupLobby({ user, profile, onJoinGroup, onProfileUpdate
     if (!grp) { setError("Code invalide 😕"); setLoading(false); return }
     const { data: existing } = await supabase.from("group_members").select("id").eq("group_id", grp.id).eq("user_id", user.id).single()
     if (!existing) {
-      const colors = ["#ec4899","#38bdf8","#4ade80","#fb923c","#818cf8","#34d399","#fbbf24","#f43f5e"]
+      const colors = ["var(--accent2)","#38bdf8","#4ade80","#fb923c","#818cf8","#34d399","#fbbf24","#f43f5e"]
       await supabase.from("group_members").insert({ group_id: grp.id, user_id: user.id, color: colors[Math.floor(Math.random()*colors.length)] })
     }
     if (grp.status === "active" || grp.status === "waiting") { onJoinGroup(grp); return }
@@ -83,15 +83,15 @@ export default function GroupLobby({ user, profile, onJoinGroup, onProfileUpdate
   const logout = async () => { await supabase.auth.signOut() }
 
   const S: any = {
-    card: { background:"#13131f",border:"1px solid #2a2a3e",borderRadius:16,padding:16,marginBottom:12 },
-    input: { width:"100%",padding:"12px 14px",borderRadius:12,background:"#1e1e2e",border:"1px solid #2a2a3e",color:"#e2e8f0",fontSize:14,outline:"none",boxSizing:"border-box",marginBottom:10 },
+    card: { background:"var(--bg-card)",border:"1px solid #2a2a3e",borderRadius:16,padding:16,marginBottom:12 },
+    input: { width:"100%",padding:"12px 14px",borderRadius:12,background:"var(--border)",border:"1px solid #2a2a3e",color:"#e2e8f0",fontSize:14,outline:"none",boxSizing:"border-box",marginBottom:10 },
     btn: (bg?: string, extra?: any) => ({ width:"100%",padding:"13px",borderRadius:13,border:"none",cursor:"pointer",background:bg||"linear-gradient(135deg,#a855f7,#ec4899)",color:"#fff",fontSize:14,fontWeight:700, ...extra }),
   }
 
   if (selectedRace) return <FinishedRace race={selectedRace} onBack={() => setSelectedRace(null)}/>
 
   if (confirmDelete) return (
-    <div style={{ minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:24,background:"#0a0a14" }}>
+    <div style={{ minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:24,background:"var(--bg)" }}>
       <div style={{ width:"100%",maxWidth:360,textAlign:"center" }}>
         <div style={{ fontSize:48,marginBottom:16 }}>🗑</div>
         <h2 style={{ fontFamily:"'Bebas Neue',cursive",fontSize:24,color:"#f87171",letterSpacing:2,margin:"0 0 12px" }}>
@@ -103,7 +103,7 @@ export default function GroupLobby({ user, profile, onJoinGroup, onProfileUpdate
             : `Tu quitteras "${confirmDelete.name}". Tu pourras rejoindre à nouveau avec le code.`}
         </p>
         <div style={{ display:"flex",gap:10 }}>
-          <button onClick={()=>setConfirmDelete(null)} style={{ flex:1,padding:"13px",borderRadius:13,border:"1px solid #2a2a3e",cursor:"pointer",background:"#1e1e2e",color:"#9ca3af",fontSize:14,fontWeight:700 }}>
+          <button onClick={()=>setConfirmDelete(null)} style={{ flex:1,padding:"13px",borderRadius:13,border:"1px solid #2a2a3e",cursor:"pointer",background:"var(--border)",color:"#9ca3af",fontSize:14,fontWeight:700 }}>
             Annuler
           </button>
           <button onClick={()=>deleteGroup(confirmDelete)} style={{ flex:1,padding:"13px",borderRadius:13,border:"none",cursor:"pointer",background:"linear-gradient(135deg,#ef4444,#dc2626)",color:"#fff",fontSize:14,fontWeight:700 }}>
@@ -128,9 +128,9 @@ export default function GroupLobby({ user, profile, onJoinGroup, onProfileUpdate
           <div style={{ background:"#fff",borderRadius:16,padding:16,display:"inline-block",marginBottom:14 }}>
             <QRCode value={joinUrl} size={180}/>
           </div>
-          <div style={{ background:"#1e1e2e",borderRadius:12,padding:"10px 16px",marginBottom:14 }}>
+          <div style={{ background:"var(--border)",borderRadius:12,padding:"10px 16px",marginBottom:14 }}>
             <div style={{ fontSize:11,color:"#6b7280",marginBottom:2 }}>Code d'invitation</div>
-            <div style={{ fontFamily:"'Bebas Neue',cursive",fontSize:28,color:"#c084fc",letterSpacing:4 }}>{newGroup.join_code}</div>
+            <div style={{ fontFamily:"'Bebas Neue',cursive",fontSize:28,color:"var(--accent)",letterSpacing:4 }}>{newGroup.join_code}</div>
           </div>
           <div style={{ fontSize:10,color:"#4b5563",marginBottom:18,wordBreak:"break-all" as const }}>{joinUrl}</div>
           <button onClick={startRace} style={S.btn()}>🏁 Lancer la course !</button>
@@ -146,7 +146,7 @@ export default function GroupLobby({ user, profile, onJoinGroup, onProfileUpdate
           <h1 style={{ fontFamily:"'Bebas Neue',cursive",fontSize:28,letterSpacing:3,background:"linear-gradient(135deg,#c084fc,#ec4899)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",margin:0 }}>DRUNKRACE</h1>
           <p style={{ color:"#6b7280",fontSize:12,margin:0 }}>Salut {profile.avatar} {profile.pseudo} !</p>
         </div>
-        <button onClick={logout} style={{ background:"#1e1e2e",border:"1px solid #2a2a3e",borderRadius:10,color:"#6b7280",fontSize:12,padding:"8px 12px",cursor:"pointer" }}>Déco</button>
+        <button onClick={logout} style={{ background:"var(--border)",border:"1px solid #2a2a3e",borderRadius:10,color:"#6b7280",fontSize:12,padding:"8px 12px",cursor:"pointer" }}>Déco</button>
       </div>
 
       {creating ? (
@@ -155,7 +155,7 @@ export default function GroupLobby({ user, profile, onJoinGroup, onProfileUpdate
           <input style={S.input} value={groupName} onChange={e=>setGroupName(e.target.value)} placeholder="Ex: Soirée IUT 🎉" maxLength={40} onKeyDown={(e:any)=>e.key==="Enter"&&createGroup()}/>
           {error && <div style={{ color:"#ef4444",fontSize:12,marginBottom:8 }}>{error}</div>}
           <div style={{ display:"flex",gap:8 }}>
-            <button onClick={()=>setCreating(false)} style={{ ...S.btn("#1e1e2e",{border:"1px solid #2a2a3e",color:"#6b7280",flex:1}) }}>Annuler</button>
+            <button onClick={()=>setCreating(false)} style={{ ...S.btn("var(--border)",{border:"1px solid #2a2a3e",color:"#6b7280",flex:1}) }}>Annuler</button>
             <button onClick={createGroup} disabled={loading} style={{ ...S.btn(),flex:2 }}>{loading?"Création…":"Créer 🎉"}</button>
           </div>
         </div>
@@ -187,7 +187,7 @@ export default function GroupLobby({ user, profile, onJoinGroup, onProfileUpdate
                     {g.status==="active"?"Rejoindre":"Attente"}
                   </button>
                 ) : (
-                  <button onClick={()=>setSelectedRace(g)} style={{ background:"#1e1e2e",border:"1px solid #2a2a3e",borderRadius:8,color:"#9ca3af",fontSize:11,padding:"6px 10px",cursor:"pointer" }}>
+                  <button onClick={()=>setSelectedRace(g)} style={{ background:"var(--border)",border:"1px solid #2a2a3e",borderRadius:8,color:"#9ca3af",fontSize:11,padding:"6px 10px",cursor:"pointer" }}>
                     Voir 📊
                   </button>
                 )}
