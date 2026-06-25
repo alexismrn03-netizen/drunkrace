@@ -512,6 +512,30 @@ function TabBar({ active, onChange, accentColor }: {active:string, onChange:(t:s
 function RaceAppInner({ user, profile, group, onLeave, onProfileUpdate }: any) {
   const { T, setTheme } = useTheme()
   const [tab, setTab]           = useState("race")
+  const audioStarted = useRef(false)
+
+  // Démarrer la musique dès le premier tap utilisateur
+  // (iOS interdit l'audio sans interaction utilisateur)
+  useEffect(() => {
+    const startOnTap = () => {
+      if (audioStarted.current) return
+      audioStarted.current = true
+      const { getSavedVolume, getSavedMuted } = require("@/lib/theme")
+      const vol = getSavedVolume()
+      const muted = getSavedMuted()
+      if (!muted) {
+        import("@/lib/ambiance").then(({ startAmbiance }) => startAmbiance(vol))
+      }
+      window.removeEventListener("touchstart", startOnTap)
+      window.removeEventListener("click", startOnTap)
+    }
+    window.addEventListener("touchstart", startOnTap, { once: true })
+    window.addEventListener("click", startOnTap, { once: true })
+    return () => {
+      window.removeEventListener("touchstart", startOnTap)
+      window.removeEventListener("click", startOnTap)
+    }
+  }, [])
 
   // Check if we should show notif permission modal (first time only)
 
