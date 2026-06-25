@@ -1,4 +1,15 @@
 // Service Worker for DrunkRace Push Notifications
+// v2 — cache bust
+const CACHE_VERSION = 'v' + Date.now()
+
+self.addEventListener('install', () => self.skipWaiting())
+
+self.addEventListener('activate', e => e.waitUntil(
+  caches.keys().then(keys =>
+    Promise.all(keys.map(k => caches.delete(k)))
+  ).then(() => clients.claim())
+))
+
 self.addEventListener('push', event => {
   const data = event.data?.json() || {}
   const title = data.title || '📸 DrunkRace'
@@ -29,6 +40,3 @@ self.addEventListener('notificationclick', event => {
     })
   )
 })
-
-self.addEventListener('install', () => self.skipWaiting())
-self.addEventListener('activate', e => e.waitUntil(clients.claim()))
