@@ -466,7 +466,6 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
             setTargetUserId("")
             setInviteId("")
             setModeSelected(null)
-            setLocalTieCount(0)
           }}
             style={{ flex:1, padding:"14px", borderRadius:14, border:"1px solid #2a2a3e", cursor:"pointer", background:"#13131f", color:"#9ca3af", fontSize:14, fontWeight:700 }}>
             🔄 Rejouer
