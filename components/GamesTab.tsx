@@ -2,6 +2,7 @@
 import { useState } from "react"
 import DuelGame from "./DuelGame"
 import HigherLower from "./HigherLower"
+import BlindTest from "./BlindTest"
 import MarbleRace from "./MarbleRace"
 import RPSGame from "./RPSGame"
 import DiceGame from "./DiceGame"
@@ -70,6 +71,15 @@ const GAMES = [
     border: "#3b1f6a",
     bg: "#1a1030",
   },
+  {
+    id: "blindtest",
+    emoji: "🎵",
+    name: "Blind Test",
+    desc: "Trouve l'artiste, le plus rapide distribue",
+    color: "#ec4899",
+    border: "#831843",
+    bg: "#1a0516",
+  },
 ]
 
 export default function GamesTab({ members, myUserId, groupId, onAwardDistance, onAwardDrink }: Props) {
@@ -109,6 +119,15 @@ export default function GamesTab({ members, myUserId, groupId, onAwardDistance, 
 
   if (activeGame === "highlow") return (
     <HigherLower
+      members={members}
+      myUserId={myUserId}
+      onAwardDistance={onAwardDistance}
+      onClose={() => setActiveGame(null)}
+    />
+  )
+
+  if (activeGame === "blindtest") return (
+    <BlindTest
       members={members}
       myUserId={myUserId}
       onAwardDistance={onAwardDistance}
