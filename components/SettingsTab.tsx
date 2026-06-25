@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { THEMES, getSavedTheme, saveTheme, getSavedVolume, saveVolume, getSavedMuted, saveMuted, type ThemeId } from "@/lib/theme"
-import { startAmbiance, stopAmbiance, setAmbianceVolume, isAmbiancePlaying } from "@/lib/ambiance"
+import { startAmbiance, setAmbianceVolume, isAmbiancePlaying } from "@/lib/ambiance"
 
 interface Props {
   onThemeChange: (id: ThemeId) => void
