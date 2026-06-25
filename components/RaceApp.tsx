@@ -5,7 +5,6 @@ import { DRINK_BASES, alcoholGrams, serializeDrink, calcCurrentBAC, calcPeak, ca
 import { parseDrinksLog } from "@/lib/memberUtils"
 import DrunkAvatar, { type AvatarConfig, DEFAULT_AVATAR } from "./DrunkAvatar"
 import DrinkTab from "./DrinkTab"
-import PhotoTab from "./PhotoTab"
 import AvatarEditor from "./AvatarEditor"
 import GlobalProfile from "./GlobalProfile"
 import DuelGame from "./DuelGame"
@@ -13,7 +12,6 @@ import RPSGame from "./RPSGame"
 import DiceGame from "./DiceGame"
 import WheelGame from "./WheelGame"
 import GamesTab from "./GamesTab"
-import BeDrunkController, { BeDrunkGallery } from "./BeDrunk"
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 function memberDist(drinks: DrinkEntry[]) {
@@ -494,7 +492,7 @@ function ProfileTab({ myMember, user, group, onUpdate, onShowGlobal }: any) {
 
 // ── TAB BAR ──────────────────────────────────────────────────────────────────
 function TabBar({ active, onChange }: {active:string, onChange:(t:string)=>void}) {
-  const tabs=[{id:"race",label:"🏁 Piste"},{id:"drink",label:"🍺 Boire"},{id:"games",label:"🎮 Jeux"},{id:"photos",label:"📸 Photos"},{id:"stats",label:"📊 Stats"},{id:"profile",label:"👤 Profil"}]
+  const tabs=[{id:"race",label:"🏁 Piste"},{id:"drink",label:"🍺 Boire"},{id:"games",label:"🎮 Jeux"},{id:"stats",label:"📊 Stats"},{id:"profile",label:"👤 Profil"},{id:"settings",label:"⚙️ Réglages"}]
   return (
     <div style={{display:"flex",position:"fixed",bottom:0,left:0,right:0,background:"#0a0a14",borderTop:"1px solid #1a1a2a",zIndex:1000,paddingBottom:"env(safe-area-inset-bottom, 0px)",height:85}}>
       {tabs.map(t=>(
@@ -508,6 +506,23 @@ function TabBar({ active, onChange }: {active:string, onChange:(t:string)=>void}
 }
 
 // ── MAIN RACE APP ─────────────────────────────────────────────────────────────
+
+// ── SETTINGS TAB ─────────────────────────────────────────────────────────────
+function SettingsTab() {
+  return (
+    <div style={{ padding: "24px 16px 100px", display: "flex", flexDirection: "column" as const, gap: 16 }}>
+      <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 26, letterSpacing: 3, background: "linear-gradient(135deg,#c084fc,#ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+        ⚙️ RÉGLAGES
+      </div>
+
+      {/* A compléter */}
+      <div style={{ background: "#13131f", borderRadius: 14, padding: 16, border: "1px solid #2a2a3e", color: "#6b7280", fontSize: 13 }}>
+        Les réglages arrivent bientôt 🚀
+      </div>
+    </div>
+  )
+}
+
 export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate }: any) {
   const [tab, setTab]           = useState("race")
   const [showNotifModal, setShowNotifModal] = useState(false)
@@ -717,7 +732,7 @@ export default function RaceApp({ user, profile, group, onLeave, onProfileUpdate
       {tab==="games"   && <GamesTab members={members} myUserId={user.id} groupId={group.id} onAwardDistance={handleAwardSimple} onAwardDrink={handleAwardDistance}/>}
       {tab==="stats"   && <StatsTab myMember={myMember} members={members} samMember={samMember} events={events}/>}
       {tab==="photo"   && <PhotoTab groupId={group.id} userId={user.id}/>}
-      {tab==="photos"  && <BeDrunkGallery groupId={group.id} myUserId={user.id}/>}
+      {tab==="settings" && <SettingsTab />}
       {tab==="profile" && <ProfileTab myMember={myMember} user={user} group={group} onUpdate={(p:any)=>{setMembers(prev=>prev.map(m=>m.isMe?{...m,...p}:m));onProfileUpdate()}} onShowGlobal={()=>setShowGlobalProfile(true)}/>}
       {/* Notification permission modal */}
       {showNotifModal && (
