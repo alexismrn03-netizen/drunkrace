@@ -280,7 +280,7 @@ export default function MarbleRace({members,onClose}:Props) {
   const BG:any={position:"fixed",inset:0,background:"#0a0a14",zIndex:400,
     display:"flex",flexDirection:"column",alignItems:"center"}
 
-  // ── SETUP ──────────────────────────────────────────────────────────────
+  // ── SETUP v2 ─────────────────────────────────────────────────────────────
   if(phase==="setup")return(
     <div style={{...BG,overflowY:"auto"}}>
       <div style={{width:"100%",maxWidth:380,padding:"24px 16px 60px"}}>
