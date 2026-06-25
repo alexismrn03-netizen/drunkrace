@@ -78,8 +78,8 @@ export default function GlobalProfile({ user, profile, onClose }: Props) {
   const avgPerNight = finishedGroups.length > 0 ? totalVerres / finishedGroups.length : 0
 
   const STATS = [
-    { icon:"🍺", label:"Total verres", value: totalVerres, color:"#c084fc" },
-    { icon:"🏁", label:"Distance totale", value: `${totalDist.toFixed(0)}m`, color:"#ec4899" },
+    { icon:"🍺", label:"Total verres", value: totalVerres, color:"var(--accent)" },
+    { icon:"🏁", label:"Distance totale", value: `${totalDist.toFixed(0)}m`, color:"var(--accent2)" },
     { icon:"🎉", label:"Soirées", value: groups.length, color:"#fbbf24" },
     { icon:"⚗️", label:"Alcool total", value: `${totalAlcohol.toFixed(0)}g`, color:"#f87171" },
     { icon:"📈", label:"Moy. verres/soir", value: avgPerNight.toFixed(1), color:"#38bdf8" },
@@ -87,7 +87,7 @@ export default function GlobalProfile({ user, profile, onClose }: Props) {
   ]
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"#0a0a14", zIndex:500, overflowY:"auto" }}>
+    <div style={{ position:"fixed", inset:0, background:"var(--bg)", zIndex:500, overflowY:"auto" }}>
       <div style={{ padding:"24px 16px 80px", maxWidth:480, margin:"0 auto" }}>
 
         {/* Header */}
@@ -105,12 +105,12 @@ export default function GlobalProfile({ user, profile, onClose }: Props) {
           <div style={{ fontSize:11, color:"#6b7280", marginTop:4 }}>{user.email}</div>
           <div style={{ display:"flex", justifyContent:"center", gap:16, marginTop:14 }}>
             <div style={{ textAlign:"center" }}>
-              <div style={{ fontSize:22, fontWeight:700, color:"#c084fc", fontFamily:"'Bebas Neue',cursive" }}>{groups.length}</div>
+              <div style={{ fontSize:22, fontWeight:700, color:"var(--accent)", fontFamily:"'Bebas Neue',cursive" }}>{groups.length}</div>
               <div style={{ fontSize:10, color:"#6b7280" }}>Soirées</div>
             </div>
             <div style={{ width:1, background:"#2a2a3e" }}/>
             <div style={{ textAlign:"center" }}>
-              <div style={{ fontSize:22, fontWeight:700, color:"#ec4899", fontFamily:"'Bebas Neue',cursive" }}>{totalVerres}</div>
+              <div style={{ fontSize:22, fontWeight:700, color:"var(--accent2)", fontFamily:"'Bebas Neue',cursive" }}>{totalVerres}</div>
               <div style={{ fontSize:10, color:"#6b7280" }}>Verres</div>
             </div>
             <div style={{ width:1, background:"#2a2a3e" }}/>
@@ -124,7 +124,7 @@ export default function GlobalProfile({ user, profile, onClose }: Props) {
         {/* Stats grid */}
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:20 }}>
           {STATS.map(s => (
-            <div key={s.label} style={{ background:"#13131f", borderRadius:12, padding:14, border:"1px solid #2a2a3e" }}>
+            <div key={s.label} style={{ background:"var(--bg-card)", borderRadius:12, padding:14, border:"1px solid #2a2a3e" }}>
               <div style={{ fontSize:22, marginBottom:4 }}>{s.icon}</div>
               <div style={{ fontSize:20, fontWeight:700, color:s.color, fontFamily:"'Bebas Neue',cursive" }}>{s.value}</div>
               <div style={{ fontSize:10, color:"#6b7280" }}>{s.label}</div>
@@ -157,7 +157,7 @@ export default function GlobalProfile({ user, profile, onClose }: Props) {
         )}
 
         {/* MAP placeholder — shows list of parties with location */}
-        <div style={{ background:"#13131f", borderRadius:14, padding:16, border:"1px solid #2a2a3e", marginBottom:20 }}>
+        <div style={{ background:"var(--bg-card)", borderRadius:14, padding:16, border:"1px solid #2a2a3e", marginBottom:20 }}>
           <div style={{ fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:1, textTransform:"uppercase" as const, marginBottom:12 }}>📍 Historique des soirées</div>
           {loading ? (
             <div style={{ color:"#4b5563", fontSize:12, textAlign:"center", padding:"20px 0" }}>Chargement…</div>
@@ -176,7 +176,7 @@ export default function GlobalProfile({ user, profile, onClose }: Props) {
                 const date = new Date(m.created_at).toLocaleDateString("fr-FR", { day:"2-digit", month:"short", year:"numeric" })
                 const statusColor = m.groups?.status === "finished" ? "#4ade80" : m.groups?.status === "active" ? "#fbbf24" : "#6b7280"
                 return (
-                  <div key={m.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", background:"#1e1e2e", borderRadius:10, border:"1px solid #2a2a3e" }}>
+                  <div key={m.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", background:"var(--border)", borderRadius:10, border:"1px solid #2a2a3e" }}>
                     <div style={{ width:8, height:8, borderRadius:"50%", background:statusColor, flexShrink:0 }}/>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontSize:12, fontWeight:600, color:"#e2e8f0", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" as const }}>
@@ -185,7 +185,7 @@ export default function GlobalProfile({ user, profile, onClose }: Props) {
                       <div style={{ fontSize:10, color:"#6b7280" }}>{date}</div>
                     </div>
                     <div style={{ textAlign:"right" as const, flexShrink:0 }}>
-                      <div style={{ fontSize:12, fontWeight:700, color:"#c084fc", fontFamily:"'Bebas Neue',cursive" }}>{dist.toFixed(1)}m</div>
+                      <div style={{ fontSize:12, fontWeight:700, color:"var(--accent)", fontFamily:"'Bebas Neue',cursive" }}>{dist.toFixed(1)}m</div>
                       <div style={{ fontSize:10, color:"#6b7280" }}>{drinks.length}🍺</div>
                     </div>
                   </div>
@@ -196,11 +196,11 @@ export default function GlobalProfile({ user, profile, onClose }: Props) {
         </div>
 
         {/* Progress bars for fun */}
-        <div style={{ background:"#13131f", borderRadius:14, padding:16, border:"1px solid #2a2a3e" }}>
+        <div style={{ background:"var(--bg-card)", borderRadius:14, padding:16, border:"1px solid #2a2a3e" }}>
           <div style={{ fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:1, textTransform:"uppercase" as const, marginBottom:14 }}>🏅 Achievements</div>
           {[
-            { label:"Soirées", current:groups.length, max:10, color:"#c084fc", emoji:"🎉" },
-            { label:"Distance totale", current:Math.min(totalDist, 500), max:500, suffix:`${totalDist.toFixed(0)}m`, color:"#ec4899", emoji:"🏁" },
+            { label:"Soirées", current:groups.length, max:10, color:"var(--accent)", emoji:"🎉" },
+            { label:"Distance totale", current:Math.min(totalDist, 500), max:500, suffix:`${totalDist.toFixed(0)}m`, color:"var(--accent2)", emoji:"🏁" },
             { label:"Verres totaux", current:Math.min(totalVerres, 100), max:100, suffix:`${totalVerres}`, color:"#fbbf24", emoji:"🍺" },
           ].map(a => (
             <div key={a.label} style={{ marginBottom:12 }}>
@@ -208,7 +208,7 @@ export default function GlobalProfile({ user, profile, onClose }: Props) {
                 <span style={{ fontSize:11, color:"#9ca3af" }}>{a.emoji} {a.label}</span>
                 <span style={{ fontSize:11, color:a.color, fontWeight:700 }}>{a.suffix || a.current}/{a.max}</span>
               </div>
-              <div style={{ height:8, background:"#1e1e2e", borderRadius:4, overflow:"hidden" }}>
+              <div style={{ height:8, background:"var(--border)", borderRadius:4, overflow:"hidden" }}>
                 <div style={{ height:"100%", width:`${Math.min((a.current/a.max)*100,100)}%`, background:`linear-gradient(90deg,${a.color}80,${a.color})`, borderRadius:4, transition:"width 1s ease-out" }}/>
               </div>
             </div>
