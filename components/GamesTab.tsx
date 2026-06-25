@@ -22,7 +22,7 @@ const GAMES = [
     emoji: "🏎️",
     name: "Duel de Shots",
     desc: "Qui boit le plus vite ?",
-    color: "#c084fc",
+    color: "var(--accent)",
     border: "#3b1f6a",
     bg: "#1a1030",
   },
@@ -49,7 +49,7 @@ const GAMES = [
     emoji: "🎰",
     name: "Roue des Défis",
     desc: "Tourne et accepte ton destin",
-    color: "#ec4899",
+    color: "var(--accent2)",
     border: "#831843",
     bg: "#1a0516",
   },
@@ -67,7 +67,7 @@ const GAMES = [
     emoji: "🃏",
     name: "Plus ou Moins",
     desc: "Devine la carte, bois si raté",
-    color: "#a855f7",
+    color: "var(--accent)",
     border: "#3b1f6a",
     bg: "#1a1030",
   },
@@ -76,7 +76,7 @@ const GAMES = [
     emoji: "🎵",
     name: "Blind Test",
     desc: "Trouve l'artiste, le plus rapide distribue",
-    color: "#ec4899",
+    color: "var(--accent2)",
     border: "#831843",
     bg: "#1a0516",
   },
@@ -188,7 +188,7 @@ export default function GamesTab({ members, myUserId, groupId, onAwardDistance, 
       </div>
 
       {/* Rules reminder */}
-      <div style={{ background:"#13131f", borderRadius:14, padding:14, border:"1px solid #2a2a3e", marginTop:20 }}>
+      <div style={{ background:"var(--bg-card)", borderRadius:14, padding:14, border:"1px solid #2a2a3e", marginTop:20 }}>
         <div style={{ fontSize:11, fontWeight:700, color:"#6b7280", letterSpacing:1, textTransform:"uppercase" as const, marginBottom:10 }}>
           Rappel des règles
         </div>
