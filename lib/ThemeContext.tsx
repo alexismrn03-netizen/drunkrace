@@ -1,5 +1,5 @@
 "use client"
-import { createContext, useContext, useState, type ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { THEMES, getSavedTheme, saveTheme, type ThemeId, type Theme } from "@/lib/theme"
 
 interface ThemeContextType {
