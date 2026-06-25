@@ -171,12 +171,12 @@ export default function MarbleRace({members,onClose}:Props) {
   const BASE=7.5 // px/frame base speed
 
   const doStart=()=>{
-    const wi=Math.floor(Math.random()*nPlayers)
+    const wi=Math.floor(Math.random()*selectedIds.length)
     winRef.current=null;setWinner(null);setGorges({});setLeft(10)
     const init:Marble[]=players.map((p,i)=>{
       const [wx,wy]=posAt(sp,0)
       return{id:p.id,name:p.name,colorIdx:p.colorIdx,
-        d:0,lat:(i-(nPlayers-1)/2)*14,vd:BASE*(0.88+Math.random()*.1)*(i===wi?1.2:1),
+        d:0,lat:(i-(selectedIds.length-1)/2)*14,vd:BASE*(0.88+Math.random()*.1)*(i===wi?1.2:1),
         vl:(Math.random()-.5)*.5,wx,wy,stun:0,boost:0,finished:false}
     })
     mbRef.current=init;setMbs(init)
