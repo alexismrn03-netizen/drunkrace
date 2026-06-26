@@ -172,7 +172,7 @@ function GameView({
   const [ballPos, setBallPos] = useState({ x: 0, y: 0 })
   const [ballVisible, setBallVisible] = useState(false)
   const [throwing, setThrowing] = useState(false)
-  const frameRef = useRef<number>()
+  const frameRef = useRef<number | undefined>(undefined)
   const containerRef = useRef<HTMLDivElement>(null)
   const swipeStartY = useRef<number | null>(null)
   const lockedGauge = useRef<number>(50)
