@@ -462,14 +462,6 @@ export default function BlindTest({ members, myUserId, groupId, onAwardDistance,
       .single()
     if (error || !data) { setJoinError("Code invalide ou partie déjà commencée"); return }
 
-    // Ajouter le joueur
-    const currentPlayers = data.players || []
-    if (!currentPlayers.find((p: any) => p.user_id === myUserId)) {
-      await supabase.from("blindtest_sessions").update({
-        players: [...currentPlayers, { user_id: myUserId, pseudo: members.find(m => m.user_id === myUserId)?.pseudo }]
-      }).eq("id", data.id)
-    }
-
     setSessionId(data.id)
     setCategory(data.category)
     setQuestions(data.questions)
