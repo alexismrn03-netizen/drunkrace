@@ -505,11 +505,14 @@ export default function BeerPong({ members, myUserId, groupId, onAwardDistance, 
   }, [])
 
   // ── CRÉER SESSION ──
+  const lobbyPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
   const createSession = async () => {
     const code = generateCode()
     const { data, error } = await supabase.from("beerpong_sessions").insert({
       code, group_id: groupId,
-      host_id: myUserId, guest_id: null,
+      host_id: myUserId,
+      players: [{ user_id: myUserId, pseudo: me?.pseudo || "?" }],
       host_cups: Array(TOTAL_CUPS).fill(true),
       guest_cups: Array(TOTAL_CUPS).fill(true),
       current_turn: myUserId,
@@ -521,29 +524,53 @@ export default function BeerPong({ members, myUserId, groupId, onAwardDistance, 
     setSessionId(data.id)
     setIsHost(true)
     setIsMyTurn(true)
-    setLobbyPlayers([myUserId])
+    setLobbyPlayers([{ user_id: myUserId, pseudo: me?.pseudo || "?" }])
     setPhase("lobby")
-    // Polling lobby pour détecter quand le guest rejoint
-    pollLobby(data.id)
+    startLobbyPoll(data.id)
   }
 
-  // ── POLLING LOBBY (host) ──
-  const pollLobby = (sid: string) => {
-    const interval = setInterval(async () => {
-      const { data } = await supabase.from("beerpong_sessions")
-        .select("*").eq("id", sid).single()
+  // ── POLLING LOBBY ──
+  const startLobbyPoll = (sid: string) => {
+    if (lobbyPollRef.current) clearInterval(lobbyPollRef.current)
+    lobbyPollRef.current = setInterval(async () => {
+      const { data } = await supabase.from("beerpong_sessions").select("*").eq("id", sid).single()
       if (!data) return
-      if (data.status === "playing" && data.guest_id) {
-        clearInterval(interval)
-        setOpponentId(data.guest_id)
+      // Mettre à jour la liste des joueurs
+      if (data.players) setLobbyPlayers(data.players)
+      // Si la partie a été lancée (par le host)
+      if (data.status === "playing") {
+        clearInterval(lobbyPollRef.current!)
+        const myIdx = data.players.findIndex((p: any) => p.user_id === myUserId)
+        const oppIdx = myIdx === 0 ? 1 : 0
+        if (data.players[oppIdx]) setOpponentId(data.players[oppIdx].user_id)
+        setIsMyTurn(data.current_turn === myUserId)
         setMyCups(Array(TOTAL_CUPS).fill(true))
         setEnemyCups(Array(TOTAL_CUPS).fill(true))
         setPhase("playing")
-        subscribeToSession(sid, true)
+        subscribeToSession(sid, data.players[0].user_id === myUserId)
       }
     }, 1500)
-    // Cleanup après 5 minutes
-    setTimeout(() => clearInterval(interval), 5 * 60 * 1000)
+    setTimeout(() => { if (lobbyPollRef.current) clearInterval(lobbyPollRef.current) }, 10 * 60 * 1000)
+  }
+
+  // ── LANCER LA PARTIE (host) ──
+  const launchGame = async () => {
+    if (lobbyPlayers.length < 2) return
+    const guestId = lobbyPlayers.find((p: any) => p.user_id !== myUserId)?.user_id
+    await supabase.from("beerpong_sessions").update({
+      status: "playing",
+      guest_id: guestId,
+      current_turn: myUserId,
+    }).eq("id", sessionId)
+    // Le host passe directement en playing
+    const oppPlayer = lobbyPlayers.find((p: any) => p.user_id !== myUserId)
+    if (oppPlayer) setOpponentId(oppPlayer.user_id)
+    setIsMyTurn(true)
+    setMyCups(Array(TOTAL_CUPS).fill(true))
+    setEnemyCups(Array(TOTAL_CUPS).fill(true))
+    clearInterval(lobbyPollRef.current!)
+    setPhase("playing")
+    subscribeToSession(sessionId, true)
   }
 
   // ── REJOINDRE SESSION ──
@@ -553,18 +580,19 @@ export default function BeerPong({ members, myUserId, groupId, onAwardDistance, 
       .select("*").eq("code", joinCode.trim()).eq("group_id", groupId).eq("status", "waiting").single()
     if (error || !data) { setJoinError("Code invalide ou partie déjà commencée"); return }
 
-    const { error: err2 } = await supabase.from("beerpong_sessions")
-      .update({ guest_id: myUserId, status: "playing" }).eq("id", data.id)
-    if (err2) return
+    // Ajouter le joueur à la liste
+    const currentPlayers = data.players || []
+    if (!currentPlayers.find((p: any) => p.user_id === myUserId)) {
+      await supabase.from("beerpong_sessions").update({
+        players: [...currentPlayers, { user_id: myUserId, pseudo: me?.pseudo || "?" }]
+      }).eq("id", data.id)
+    }
 
     setSessionId(data.id)
-    setOpponentId(data.host_id)
     setIsHost(false)
-    setIsMyTurn(false) // Host commence
-    setMyCups(Array(TOTAL_CUPS).fill(true))
-    setEnemyCups(Array(TOTAL_CUPS).fill(true))
-    setPhase("playing")
-    subscribeToSession(data.id, false)
+    setLobbyPlayers([...currentPlayers, { user_id: myUserId, pseudo: me?.pseudo || "?" }])
+    setPhase("lobby")
+    startLobbyPoll(data.id)
   }
 
   // ── REALTIME ──
@@ -577,14 +605,6 @@ export default function BeerPong({ members, myUserId, groupId, onAwardDistance, 
 
   const handleUpdate = (data: any, host: boolean) => {
     if (!data) return
-
-    // Guest rejoint → host peut commencer
-    if (data.status === "playing" && data.guest_id && phase === "lobby") {
-      setOpponentId(host ? data.guest_id : data.host_id)
-      setMyCups(Array(TOTAL_CUPS).fill(true))
-      setEnemyCups(Array(TOTAL_CUPS).fill(true))
-      setPhase("playing")
-    }
 
     if (data.status === "playing" || data.status === "gameover") {
       // Mes coupes = host_cups si je suis host, guest_cups sinon
@@ -773,11 +793,35 @@ export default function BeerPong({ members, myUserId, groupId, onAwardDistance, 
             <span style={{ fontSize:13, fontWeight:600, color:"#e2e8f0" }}>{me_pseudo}</span>
             <span style={{ fontSize:10, color:"#fbbf24", fontWeight:700 }}>HOST</span>
           </div>
-          <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:8, opacity:0.4 }}>
-            <div style={{ width:8, height:8, borderRadius:"50%", background:"#374151", animation:"pulse 1s infinite" }}/>
-            <span style={{ fontSize:13, color:"#6b7280" }}>En attente...</span>
-          </div>
+            {lobbyPlayers.filter((p: any) => p.user_id !== myUserId).map((p: any) => (
+            <div key={p.user_id} style={{ display:"flex", alignItems:"center", gap:10, marginTop:8 }}>
+              <div style={{ width:8, height:8, borderRadius:"50%", background:"#fbbf24" }}/>
+              <span style={{ fontSize:13, fontWeight:600, color:"#e2e8f0" }}>{p.pseudo}</span>
+            </div>
+          ))}
+          {lobbyPlayers.length < 2 && (
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:8, opacity:0.4 }}>
+              <div style={{ width:8, height:8, borderRadius:"50%", background:"#374151", animation:"pulse 1s infinite" }}/>
+              <span style={{ fontSize:13, color:"#6b7280" }}>En attente d'un adversaire...</span>
+            </div>
+          )}
         </div>
+
+        {isHost && (
+          <button onClick={launchGame} disabled={lobbyPlayers.length < 2}
+            style={{ width:"100%", padding:"16px", borderRadius:14, border:"none",
+              cursor:lobbyPlayers.length>=2?"pointer":"not-allowed",
+              background:lobbyPlayers.length>=2?"linear-gradient(135deg,#fbbf24,#f97316)":"#2a2a3e",
+              color:lobbyPlayers.length>=2?"#0a0a14":"#4b5563",
+              fontFamily:"'Bebas Neue',cursive", fontSize:17, letterSpacing:2 }}>
+            {lobbyPlayers.length>=2?"🚀 LANCER LA PARTIE":"EN ATTENTE D'UN ADVERSAIRE..."}
+          </button>
+        )}
+        {!isHost && (
+          <div style={{ textAlign:"center" as const, padding:16, color:"#4b5563", fontSize:13 }}>
+            En attente que le host lance la partie...
+          </div>
+        )}
 
         <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}`}</style>
       </div>
