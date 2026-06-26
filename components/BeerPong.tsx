@@ -483,7 +483,7 @@ export default function BeerPong({ members, myUserId, groupId, onAwardDistance, 
   const [splashingCup, setSplashingCup] = useState<number | null>(null)
   const [missAnim, setMissAnim] = useState(false)
   const [joinError, setJoinError] = useState("")
-  const [lobbyPlayers, setLobbyPlayers] = useState<string[]>([])
+  const [lobbyPlayers, setLobbyPlayers] = useState<any[]>([])
   const [resultMsg, setResultMsg] = useState("")
 
   const wasPlaying = useRef(false)
