@@ -382,6 +382,7 @@ export default function BlindTest({ members, myUserId, groupId, onAwardDistance,
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const wasPlaying = useRef(false)
   const channelRef = useRef<any>(null)
+  const lobbyPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const q = questions[qIndex]
   const catInfo = CATEGORIES.find(c => c.id === category)
@@ -421,7 +422,33 @@ export default function BlindTest({ members, myUserId, groupId, onAwardDistance,
     setIsHost(true)
     setPlayers([members.find(m => m.user_id === myUserId)])
     setPhase("lobby")
-    subscribeToSession(data.id)
+    startLobbyPoll(data.id)
+  }
+
+  // ── POLLING LOBBY ──
+  const startLobbyPoll = (sid: string) => {
+    if (lobbyPollRef.current) clearInterval(lobbyPollRef.current)
+    lobbyPollRef.current = setInterval(async () => {
+      const { data } = await supabase.from("blindtest_sessions").select("*").eq("id", sid).single()
+      if (!data) return
+      // Mettre à jour la liste des joueurs
+      if (data.players) setPlayers(data.players)
+      // Si la partie a été lancée par le host
+      if (data.status === "listening") {
+        clearInterval(lobbyPollRef.current!)
+        setQIndex(data.q_index)
+        setQuestions(data.questions)
+        setChoices(shuffle([data.questions[data.q_index].artist, ...data.questions[data.q_index].wrong]))
+        setSelected(null)
+        setYtId(data.yt_id || "")
+        setFastestId(null)
+        setListenTimer(10)
+        setChooseTimer(10)
+        setPhase("listening")
+        subscribeToSession(sid)
+      }
+    }, 1500)
+    setTimeout(() => { if (lobbyPollRef.current) clearInterval(lobbyPollRef.current) }, 15 * 60 * 1000)
   }
 
   // ── REJOINDRE UNE SESSION ──
@@ -447,8 +474,17 @@ export default function BlindTest({ members, myUserId, groupId, onAwardDistance,
     setCategory(data.category)
     setQuestions(data.questions)
     setIsHost(false)
+    // Ajouter le joueur à la session
+    const currentPlayers = data.players || []
+    const myMember = members.find(m => m.user_id === myUserId)
+    if (!currentPlayers.find((p: any) => p.user_id === myUserId)) {
+      await supabase.from("blindtest_sessions").update({
+        players: [...currentPlayers, myMember]
+      }).eq("id", data.id)
+    }
+    setPlayers([...currentPlayers, myMember])
     setPhase("lobby")
-    subscribeToSession(data.id)
+    startLobbyPoll(data.id)
   }
 
   // ── REALTIME ──
@@ -490,7 +526,6 @@ export default function BlindTest({ members, myUserId, groupId, onAwardDistance,
   // ── LANCER LA PARTIE (host) ──
   const startGame = async () => {
     const q0 = questions[0]
-    // Chercher l'ID YouTube
     let ytId = ""
     try {
       const res = await fetch(`/api/youtube-search?q=${encodeURIComponent(q0.title + " " + q0.artist + " official audio")}`)
@@ -498,12 +533,26 @@ export default function BlindTest({ members, myUserId, groupId, onAwardDistance,
       ytId = d.id || ""
     } catch {}
 
+    // Sauvegarder les questions et lancer
     await supabase.from("blindtest_sessions").update({
       status: "listening",
       q_index: 0,
       yt_id: ytId,
       fastest_id: null,
+      questions: questions,
     }).eq("id", sessionId)
+
+    // Host passe directement en jeu
+    clearInterval(lobbyPollRef.current!)
+    setQIndex(0)
+    setChoices(shuffle([q0.artist, ...q0.wrong]))
+    setSelected(null)
+    setYtId(ytId)
+    setFastestId(null)
+    setListenTimer(10)
+    setChooseTimer(10)
+    setPhase("listening")
+    subscribeToSession(sessionId)
   }
 
   // ── TIMER ÉCOUTE (10s) ──
