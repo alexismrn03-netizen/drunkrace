@@ -523,7 +523,27 @@ export default function BeerPong({ members, myUserId, groupId, onAwardDistance, 
     setIsMyTurn(true)
     setLobbyPlayers([myUserId])
     setPhase("lobby")
-    subscribeToSession(data.id, true)
+    // Polling lobby pour détecter quand le guest rejoint
+    pollLobby(data.id)
+  }
+
+  // ── POLLING LOBBY (host) ──
+  const pollLobby = (sid: string) => {
+    const interval = setInterval(async () => {
+      const { data } = await supabase.from("beerpong_sessions")
+        .select("*").eq("id", sid).single()
+      if (!data) return
+      if (data.status === "playing" && data.guest_id) {
+        clearInterval(interval)
+        setOpponentId(data.guest_id)
+        setMyCups(Array(TOTAL_CUPS).fill(true))
+        setEnemyCups(Array(TOTAL_CUPS).fill(true))
+        setPhase("playing")
+        subscribeToSession(sid, true)
+      }
+    }, 1500)
+    // Cleanup après 5 minutes
+    setTimeout(() => clearInterval(interval), 5 * 60 * 1000)
   }
 
   // ── REJOINDRE SESSION ──
