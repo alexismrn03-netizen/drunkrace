@@ -81,6 +81,15 @@ const GAMES = [
     border: "#831843",
     bg: "#1a0516",
   },
+  {
+    id: "beerpong",
+    emoji: "🍺",
+    name: "Beer Pong",
+    desc: "Coule les coupes de ton adversaire",
+    color: "#fbbf24",
+    border: "#78350f",
+    bg: "#1a0a00",
+  },
 ]
 
 export default function GamesTab({ members, myUserId, groupId, onAwardDistance, onAwardDrink }: Props) {
