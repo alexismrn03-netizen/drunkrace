@@ -3,6 +3,7 @@ import { useState } from "react"
 import DuelGame from "./DuelGame"
 import HigherLower from "./HigherLower"
 import BlindTest from "./BlindTest"
+import BeerPong from "./BeerPong"
 import MarbleRace from "./MarbleRace"
 import RPSGame from "./RPSGame"
 import DiceGame from "./DiceGame"
@@ -128,6 +129,16 @@ export default function GamesTab({ members, myUserId, groupId, onAwardDistance, 
 
   if (activeGame === "blindtest") return (
     <BlindTest
+      members={members}
+      myUserId={myUserId}
+      groupId={groupId}
+      onAwardDistance={onAwardDistance}
+      onClose={() => setActiveGame(null)}
+    />
+  )
+
+  if (activeGame === "beerpong") return (
+    <BeerPong
       members={members}
       myUserId={myUserId}
       groupId={groupId}
