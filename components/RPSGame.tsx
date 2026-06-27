@@ -243,6 +243,9 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
       else if (result === "lose") { onAwardDistance(myId, -3) }
       else { onAwardDistance(myId, 2); if(oppId) onAwardDistance(oppId, 2) }
     }
+    // Son selon résultat
+    if (result === "win_p1" || result === "win") playWin()
+    else if (result === "lose" || result === "win_p2") playLose()
     onClose()
   }
 
