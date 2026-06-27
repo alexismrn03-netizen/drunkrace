@@ -255,17 +255,6 @@ export default function MarbleRace({members,onClose}:Props) {
           vl=-vl*.6;vd*=.91
         }
 
-        // Obstacles aléatoires — zones de ralentissement à distances fixes
-        const OBSTACLE_ZONES = [0.15, 0.35, 0.55, 0.75]
-        const progress = d / sp.total
-        OBSTACLE_ZONES.forEach(zone => {
-          if (Math.abs(progress - zone) < 0.015 && stun === 0 && boost === 0) {
-            if (Math.random() < 0.08) { // 8% de chance de stun à chaque frame dans la zone
-              stun = 18 + Math.floor(Math.random() * 12) // 18-30 frames de stun
-              vd *= 0.5
-            }
-          }
-        })
 
         const[px,py]=posAt(sp,d)
         const[nx,ny]=normAt(sp,d)
