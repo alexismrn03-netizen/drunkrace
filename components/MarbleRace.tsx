@@ -206,7 +206,7 @@ export default function MarbleRace({members,onClose}:Props) {
 
   const doStart=()=>{
     const wi=Math.floor(Math.random()*selectedIds.length)
-    winRef.current=null;setWinner(null);setGorges({});setLeft(10)
+    winRef.current=null;playWin(); setWinner(null);setGorges({});setLeft(10)
     const init:Marble[]=players.map((p,i)=>{
       const [wx,wy]=posAt(sp,0)
       return{id:p.id,name:p.name,colorIdx:p.colorIdx,
