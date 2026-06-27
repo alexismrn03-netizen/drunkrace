@@ -65,6 +65,8 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
   const isChallenger = !invite || invite.from_user_id === myUserId
 
   const [phase, setPhase] = useState<Phase>(invite ? (invite.from_user_id === myUserId ? "waiting_accept" : "ready_p2") : "invite")
+  const phaseRef = useRef<Phase>(invite ? (invite.from_user_id === myUserId ? "waiting_accept" : "ready_p2") : "invite")
+  const setPhaseSync = (p: Phase) => { phaseRef.current = p; setPhaseSync(p) }
   const [targetUserId, setTargetUserId] = useState(invite?.to_user_id || "")
   const [inviteId, setInviteId] = useState(invite?.id || "")
   const [myChoice, setMyChoice] = useState<Choice>(null)
@@ -88,13 +90,16 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
     const poll = setInterval(async () => {
       const { data } = await supabase.from("game_invites").select("*").eq("id", inviteId).single()
       if (!data) return
-      if (isChallenger && data.status === "accepted" && phase === "waiting_accept") {
-        // Mode online: pas besoin de "passe le téléphone", aller direct au choix
-        setPhase("choose_p1")
+      if (isChallenger && data.status === "accepted" && phaseRef.current === "waiting_accept") {
+        setPhaseSync("choose_p1")
       }
-      if (isChallenger && data.game_data?.p2_choice && phase === "waiting_p2") {
+      if (isChallenger && data.game_data?.p2_choice && phaseRef.current === "waiting_p2") {
         setOpponentChoice(data.game_data.p2_choice)
         computeResult(myChoiceRef.current, data.game_data.p2_choice)
+      }
+      // Guest: p1 a choisi → on peut choisir
+      if (!isChallenger && data.game_data?.p1_choice && phaseRef.current === "ready_p2") {
+        setPhaseSync("choose_p2")
       }
       if (data.game_data?.p1_choice && data.game_data?.p2_choice && data.status === "completed") {
         const w = getWinner(data.game_data.p1_choice, data.game_data.p2_choice)
@@ -102,7 +107,7 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
         setMyChoice(isChallenger ? data.game_data.p1_choice : data.game_data.p2_choice)
         setOpponentChoice(isChallenger ? data.game_data.p2_choice : data.game_data.p1_choice)
         setResult(w === "draw" ? "draw" : iWin ? "win" : "lose")
-        setPhase("result")
+        setPhaseSync("result")
       }
     }, 1500)
 
@@ -113,11 +118,10 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
       }, (payload: any) => {
         const data = payload.new
         // Challenger sees: opponent accepted → go to lights
-        if (isChallenger && data.status === "accepted" && phase === "waiting_accept") {
-          setPhase("choose_p1")
+        if (isChallenger && data.status === "accepted" && phaseRef.current === "waiting_accept") {
+          setPhaseSync("choose_p1")
         }
-        // Challenger sees: opponent made choice
-        if (isChallenger && data.game_data?.p2_choice && phase === "waiting_p2") {
+        if (isChallenger && data.game_data?.p2_choice && phaseRef.current === "waiting_p2") {
           setOpponentChoice(data.game_data.p2_choice)
           computeResult(myChoiceRef.current, data.game_data.p2_choice)
         }
@@ -130,7 +134,7 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
           setMyChoice(isChallenger ? data.game_data.p1_choice : data.game_data.p2_choice)
           setOpponentChoice(isChallenger ? data.game_data.p2_choice : data.game_data.p1_choice)
           setResult(w === "draw" ? "draw" : iWin ? "win" : "lose")
-          setPhase("result")
+          setPhaseSync("result")
         }
       })
       .subscribe()
@@ -141,7 +145,7 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
     const w = getWinner(my!, opp)
     const iWin = isChallenger ? w === "p1" : w === "p2"
     setResult(w === "draw" ? "draw" : iWin ? "win" : "lose")
-    setPhase("result")
+    setPhaseSync("result")
     // Update DB as completed
     const p1c = isChallenger ? my : opp
     const p2c = isChallenger ? opp : my
@@ -162,14 +166,14 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
     }).select().single()
     if (error) { alert("Erreur: "+error.message); setSending(false); return }
     setInviteId(data.id)
-    setPhase("waiting_accept")
+    setPhaseSync("waiting_accept")
     setSending(false)
   }
 
   // Accept invite (opponent)
   const acceptInvite = async () => {
     await supabase.from("game_invites").update({ status: "accepted" }).eq("id", inviteId)
-    setPhase("ready_p2")
+    setPhaseSync("ready_p2")
   }
 
   // Launch F1 lights then allow choice
@@ -183,7 +187,7 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
         p1ChoiceRef.current = c
         setMyChoice(c)          // myChoice = P1's choice
         setIsLocalP1(false)
-        setPhase("ready_p2")
+        setPhaseSync("ready_p2")
       } else {
         // P2 chose — read P1 from ref (state safe), save P2 separately
         const p1c = p1ChoiceRef.current
@@ -192,7 +196,7 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
         // DO NOT call setMyChoice here — it would overwrite P1's choice!
         const w = getWinner(p1c, c)
         setResult(w === "draw" ? "draw" : w === "p1" ? "win_p1" : "win_p2")
-        setPhase("result")
+        setPhaseSync("result")
       }
       return
     }
@@ -204,7 +208,7 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
       await supabase.from("game_invites").update({
         game_data: { p1_choice: c }
       }).eq("id", inviteId)
-      setPhase("waiting_p2")
+      setPhaseSync("waiting_p2")
     } else {
       // P2 chose → check if P1 already chose
       const { data } = await supabase.from("game_invites").select("game_data").eq("id", inviteId).single()
@@ -218,12 +222,12 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
         const w = getWinner(p1c, c)
         const iWin = w === "p2"
         setResult(w === "draw" ? "draw" : iWin ? "win" : "lose")
-        setPhase("result")
+        setPhaseSync("result")
       } else {
         await supabase.from("game_invites").update({
           game_data: { ...(data?.game_data||{}), p2_choice: c }
         }).eq("id", inviteId)
-        setPhase("waiting_p2")
+        setPhaseSync("waiting_p2")
       }
     }
   }
@@ -347,7 +351,7 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
           ))}
         </div>
       </div>
-      <button onClick={() => { if(targetUserId) setPhase("ready_p1") }} disabled={!targetUserId}
+      <button onClick={() => { if(targetUserId) setPhaseSync("ready_p1") }} disabled={!targetUserId}
         style={{ width:"100%", maxWidth:360, padding:"15px", borderRadius:14, border:"none", cursor:targetUserId?"pointer":"not-allowed", background:targetUserId?"linear-gradient(135deg,#a855f7,#ec4899)":"#2a2a3e", color:targetUserId?"#fff":"#6b7280", fontSize:15, fontWeight:700 }}>
         ✊ Commencer !
       </button>
@@ -383,7 +387,7 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
     // En mode online, skip l'écran "passe le téléphone" → direct au choix
     if (modeSelected === "invite") {
       const nextPhase = phase === "ready_p1" ? "choose_p1" : "choose_p2"
-      setTimeout(() => setPhase(nextPhase), 0)
+      setTimeout(() => setPhaseSync(nextPhase), 0)
       return null
     }
     const isP1 = phase === "ready_p1"
@@ -402,7 +406,7 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
           <div style={{ fontSize:48, marginBottom:12 }}>🤜</div>
           <div style={{ fontSize:12, color:"#6b7280" }}>Prends le téléphone et choisis en secret !</div>
         </div>
-        <button onClick={() => setPhase(nextPhase)}
+        <button onClick={() => setPhaseSync(nextPhase)}
           style={{ width:"100%", maxWidth:340, padding:"18px", borderRadius:18, border:"none", cursor:"pointer", background:`linear-gradient(135deg,${color},${color}cc)`, color:"#fff", fontSize:18, fontWeight:700, boxShadow:`0 0 24px ${color}50` }}>
           ✊ JE SUIS PRÊT !
         </button>
@@ -496,7 +500,7 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
         </div>
         <div style={{ display:"flex", gap:10, width:"100%", maxWidth:340 }}>
           <button onClick={() => {
-            setPhase("invite")
+            setPhaseSync("invite")
             setMyChoice(null)
             setOpponentChoice(null)
             setResult(null)
