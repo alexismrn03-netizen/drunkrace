@@ -2,8 +2,6 @@
 import { useState } from "react"
 import DuelGame from "./DuelGame"
 import HigherLower from "./HigherLower"
-import BlindTest from "./BlindTest"
-import BeerPong from "./BeerPong"
 import MarbleRace from "./MarbleRace"
 import RPSGame from "./RPSGame"
 import DiceGame from "./DiceGame"
@@ -72,24 +70,7 @@ const GAMES = [
     border: "#3b1f6a",
     bg: "#1a1030",
   },
-  {
-    id: "blindtest",
-    emoji: "🎵",
-    name: "Blind Test",
-    desc: "Trouve l'artiste, le plus rapide distribue",
-    color: "var(--accent2)",
-    border: "#831843",
-    bg: "#1a0516",
-  },
-  {
-    id: "beerpong",
-    emoji: "🍺",
-    name: "Beer Pong",
-    desc: "Coule les coupes de ton adversaire",
-    color: "#fbbf24",
-    border: "#78350f",
-    bg: "#1a0a00",
-  },
+
 ]
 
 export default function GamesTab({ members, myUserId, groupId, onAwardDistance, onAwardDrink }: Props) {
@@ -136,25 +117,6 @@ export default function GamesTab({ members, myUserId, groupId, onAwardDistance, 
     />
   )
 
-  if (activeGame === "blindtest") return (
-    <BlindTest
-      members={members}
-      myUserId={myUserId}
-      groupId={groupId}
-      onAwardDistance={onAwardDistance}
-      onClose={() => setActiveGame(null)}
-    />
-  )
-
-  if (activeGame === "beerpong") return (
-    <BeerPong
-      members={members}
-      myUserId={myUserId}
-      groupId={groupId}
-      onAwardDistance={onAwardDistance}
-      onClose={() => setActiveGame(null)}
-    />
-  )
 
   if (activeGame === "wheel") return (
     <WheelGame
