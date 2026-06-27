@@ -214,21 +214,20 @@ function GameView({
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
-  // État drag
-  const [dragging, setDragging] = useState(false)
-  const [dragStart, setDragStart] = useState({x:0,y:0})
-  const [dragCurrent, setDragCurrent] = useState({x:0,y:0})
+  // ── ÉTAT BALLE STYLE PLATO ──
   const [ballPos, setBallPos] = useState<{x:number,y:number}|null>(null)
   const [throwing, setThrowing] = useState(false)
   const [showResult, setShowResult] = useState<'hit'|'miss'|null>(null)
-
+  const lastPosRef = useRef<{x:number,y:number}>({x:0,y:0})
+  const velRef = useRef<{x:number,y:number}>({x:0,y:0})
   const animRef = useRef<number | undefined>(undefined)
+  const prevTouchRef = useRef<{x:number,y:number}|null>(null)
 
-  const W = () => containerRef.current?.offsetWidth || 360
-  const H = () => containerRef.current?.offsetHeight || 580
+  const getW = () => containerRef.current?.offsetWidth || 360
+  const getH = () => containerRef.current?.offsetHeight || 580
 
-  // Position de la balle au repos (main du joueur)
-  const restBall = () => ({ x: W()*0.5, y: H()*0.86 })
+  // Moitié basse = zone joueur (y > 55% de la hauteur)
+  const PLAYER_ZONE_Y = 0.52
 
   const getTouchPos = (e: React.TouchEvent | TouchEvent) => {
     const rect = containerRef.current!.getBoundingClientRect()
@@ -236,82 +235,99 @@ function GameView({
     return { x: t.clientX - rect.left, y: t.clientY - rect.top }
   }
 
+  // Initialiser la balle au repos au centre bas
+  const getRestPos = () => ({ x: getW() * 0.5, y: getH() * 0.85 })
+
+  useEffect(() => {
+    if (isMyTurn && !throwing) setBallPos(getRestPos())
+    if (!isMyTurn) setBallPos(null)
+  }, [isMyTurn, throwing])
+
   const onTouchStart = (e: React.TouchEvent) => {
     if (!isMyTurn || throwing) return
     const pos = getTouchPos(e)
-    setDragging(true)
-    setDragStart(pos)
-    setDragCurrent(pos)
+    const h = getH()
+    // Seulement dans la moitié basse
+    if (pos.y < h * PLAYER_ZONE_Y) return
+    prevTouchRef.current = pos
+    velRef.current = {x:0, y:0}
+    setBallPos(pos)
   }
 
   const onTouchMove = (e: React.TouchEvent) => {
-    if (!dragging) return
+    if (!isMyTurn || throwing) return
     e.preventDefault()
-    setDragCurrent(getTouchPos(e))
+    const pos = getTouchPos(e)
+    const h = getH(), w = getW()
+    // Clamp dans la moitié basse seulement
+    const clampedY = Math.max(h * PLAYER_ZONE_Y, Math.min(h * 0.95, pos.y))
+    const clampedX = Math.max(w * 0.05, Math.min(w * 0.95, pos.x))
+    const clamped = {x: clampedX, y: clampedY}
+    // Calculer la vélocité (direction du mouvement)
+    if (prevTouchRef.current) {
+      velRef.current = {
+        x: clamped.x - prevTouchRef.current.x,
+        y: clamped.y - prevTouchRef.current.y,
+      }
+    }
+    prevTouchRef.current = clamped
+    setBallPos(clamped)
   }
 
   const onTouchEnd = (e: React.TouchEvent) => {
-    if (!dragging || throwing) return
-    setDragging(false)
-    const pos = getTouchPos(e)
-    // Direction basée sur le déplacement du doigt
-    const dx = pos.x - dragStart.x
-    const dy = pos.y - dragStart.y
-    // Swipe vers le haut requis
-    if (dy > -20) return
-    launchBall(dx, -dy)
+    if (!isMyTurn || throwing || !ballPos) return
+    const vel = velRef.current
+    // Lancer seulement si mouvement vers le haut
+    if (vel.y >= 0) return
+    launchBall(ballPos, vel)
   }
 
-  const launchBall = (dx: number, swipeDist: number) => {
+  const launchBall = (startPos: {x:number,y:number}, velocity: {x:number,y:number}) => {
     setThrowing(true)
-    const w = W(), h = H()
-    
-    // Vélocité normalisée
-    const maxSwipe = 200
-    const power = Math.min(swipeDist / maxSwipe, 1)
-    const dirX = dx / w // -0.5 à 0.5
+    const w = getW(), h = getH()
 
-    // Chercher la coupe cible la plus proche de la trajectoire
+    // Normaliser la vélocité pour calculer la direction
+    const speed = Math.hypot(velocity.x, velocity.y)
+    const normX = velocity.x / Math.max(speed, 1)
+    const normY = velocity.y / Math.max(speed, 1)
+
+    // Point d'arrivée projeté (dans la direction du lancer)
+    const power = Math.min(speed / 15, 1)
+    const projX = startPos.x + normX * w * 0.8
+    const projY = startPos.y + normY * h * 0.8
+
+    // Chercher la coupe adverse la plus proche du point d'arrivée
     let targetCupIdx = -1
     let minDist = Infinity
-    const targetX = w * (0.5 + dirX * 0.8) // projection
-    const targetY = h * 0.2
-
     enemyCups.forEach((full, i) => {
       if (!full) return
       const cp = ENEMY_CUP_POSITIONS[i]
       const cx = w * cp.x, cy = h * cp.y
-      const dist = Math.hypot(cx - targetX, cy - targetY)
+      const dist = Math.hypot(cx - projX, cy - projY)
       if (dist < minDist) { minDist = dist; targetCupIdx = i }
     })
 
-    // Précision: si la trajectoire est trop loin d'une coupe → miss
-    const HIT_THRESHOLD = w * 0.12 // 12% de la largeur
-    const hit = minDist < HIT_THRESHOLD && power > 0.25 && targetCupIdx >= 0
+    // Hit si le point d'arrivée est proche d'une coupe ET assez de puissance
+    const HIT_THRESHOLD = w * 0.13
+    const hit = minDist < HIT_THRESHOLD && power > 0.3 && targetCupIdx >= 0
 
-    // Animation physique
-    const startX = w * 0.5
-    const startY = h * 0.85
-    const endX = hit ? w * ENEMY_CUP_POSITIONS[targetCupIdx].x : w * (0.5 + dirX * 1.2)
-    const endY = hit ? h * ENEMY_CUP_POSITIONS[targetCupIdx].y : h * 0.1
-    const totalFrames = 28
+    const endX = hit ? w * ENEMY_CUP_POSITIONS[targetCupIdx].x : projX
+    const endY = hit ? h * ENEMY_CUP_POSITIONS[targetCupIdx].y : Math.max(h * 0.08, projY)
+
+    const totalFrames = 32
     let frame = 0
 
     const animate = () => {
       const t = frame / totalFrames
-      // Arc parabolique
-      const x = startX + (endX - startX) * t
-      const arc = Math.sin(t * Math.PI) * h * 0.35
-      const y = startY + (endY - startY) * t - arc
-      const sz = 22 - t * 8 // rétrécit avec la distance
-
-      setBallPos({ x, y })
-
+      const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t // ease in-out
+      const x = startPos.x + (endX - startPos.x) * ease
+      const arc = Math.sin(t * Math.PI) * h * 0.28
+      const y = startPos.y + (endY - startPos.y) * ease - arc
+      setBallPos({x, y})
       frame++
       if (frame <= totalFrames) {
         animRef.current = requestAnimationFrame(animate)
       } else {
-        // Fin de l'animation
         setBallPos(null)
         setThrowing(false)
         if (hit) playPlouf()
@@ -325,14 +341,6 @@ function GameView({
     }
     animRef.current = requestAnimationFrame(animate)
   }
-
-  // Vecteur visée
-  const aimAngle = dragging ? {
-    dx: dragCurrent.x - dragStart.x,
-    dy: dragCurrent.y - dragStart.y,
-  } : null
-
-  const rb = restBall()
 
   return (
     <div ref={containerRef}
@@ -429,53 +437,19 @@ function GameView({
         </div>
       ))}
 
-      {/* BALLE EN VOL */}
+      {/* BALLE — suit le doigt ou en vol */}
       {ballPos && (
         <div style={{position:'absolute',left:ballPos.x,top:ballPos.y,
-          transform:'translateX(-50%) translateY(-50%)',zIndex:30,pointerEvents:'none'}}>
-          <PingPongBall size={20}/>
+          transform:'translateX(-50%) translateY(-50%)',zIndex:30,pointerEvents:'none',
+          transition:throwing?'none':'none'}}>
+          <PingPongBall size={throwing ? 18 : 24}/>
         </div>
       )}
 
       {/* VISÉE (ligne pointillée) */}
-      {dragging && aimAngle && !throwing && (
-        <svg style={{position:'absolute',inset:0,zIndex:20,pointerEvents:'none'}}
-          width="100%" height="100%">
-          {/* Ligne de visée depuis le point de touch */}
-          <line
-            x1={dragStart.x} y1={dragStart.y}
-            x2={dragStart.x - aimAngle.dx * 1.5}
-            y2={dragStart.y - aimAngle.dy * 1.5}
-            stroke="rgba(251,191,36,0.6)"
-            strokeWidth="2"
-            strokeDasharray="8,6"
-            strokeLinecap="round"
-          />
-          <circle
-            cx={dragStart.x - aimAngle.dx * 1.5}
-            cy={dragStart.y - aimAngle.dy * 1.5}
-            r="6"
-            fill="rgba(251,191,36,0.85)"
-          />
-          <circle
-            cx={dragStart.x - aimAngle.dx * 1.5}
-            cy={dragStart.y - aimAngle.dy * 1.5}
-            r="14"
-            fill="none"
-            stroke="rgba(251,191,36,0.35)"
-            strokeWidth="1.5"
-          />
-        </svg>
-      )}
 
-      {/* BALLE AU REPOS */}
-      {!ballPos && !throwing && isMyTurn && (
-        <div style={{position:'absolute',left:rb.x,top:rb.y,
-          transform:'translateX(-50%) translateY(-50%)',zIndex:25,
-          animation:dragging?'none':'float 2s ease-in-out infinite'}}>
-          <PingPongBall size={26}/>
-        </div>
-      )}
+
+
 
       {/* RÉSULTAT */}
       {showResult && (
@@ -504,12 +478,11 @@ function GameView({
       )}
 
       {/* Hint swipe */}
-      {isMyTurn && !dragging && !throwing && !ballPos && (
-        <div style={{position:'absolute',bottom:40,left:'50%',transform:'translateX(-50%)',
-          display:'flex',flexDirection:'column' as const,alignItems:'center',gap:4,
-          animation:'hint-fade 2s ease-in-out infinite',zIndex:15}}>
+      {isMyTurn && !throwing && ballPos && (
+        <div style={{position:'absolute',bottom:30,left:'50%',transform:'translateX(-50%)',
+          animation:'hint-fade 2s ease-in-out infinite',zIndex:15,pointerEvents:'none'}}>
           <div style={{fontFamily:"'Bebas Neue',cursive",fontSize:9,letterSpacing:2,
-            color:'rgba(251,191,36,0.5)'}}>MAINTIENS ET GLISSE LA BALLE</div>
+            color:'rgba(251,191,36,0.4)',whiteSpace:'nowrap' as const}}>GLISSE LA BALLE ET LÂCHE</div>
         </div>
       )}
 
