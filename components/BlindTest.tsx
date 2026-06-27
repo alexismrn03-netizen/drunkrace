@@ -814,13 +814,17 @@ export default function BlindTest({ members, myUserId, groupId, onAwardDistance,
           <style>{`@keyframes eq{from{height:4px}to{height:var(--h)}}`}</style>
         </div>
 
-        {/* YouTube caché */}
-        {ytId && (
-          <iframe
-            src={`https://www.youtube.com/embed/${ytId}?autoplay=1&controls=0&start=60&mute=0&enablejsapi=1`}
-            style={{ width:1, height:1, opacity:0, pointerEvents:"none" as const, position:"absolute" as const }}
-            allow="autoplay; encrypted-media"
-          />
+        {/* YouTube player avec controls — autoplay sans interaction bloqué par navigateurs */}
+        {ytId ? (
+          <div style={{ width:"100%", marginTop:4 }}>
+            <iframe
+              src={`https://www.youtube.com/embed/${ytId}?autoplay=1&controls=1&start=30`}
+              style={{ width:"100%", height:58, borderRadius:12, border:"1px solid var(--border)" }}
+              allow="autoplay; encrypted-media"
+            />
+          </div>
+        ) : (
+          <div style={{ fontSize:11, color:"#4b5563", marginTop:4 }}>🎵 Chargement...</div>
         )}
       </div>
     </div>
