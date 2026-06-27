@@ -422,24 +422,71 @@ export default function WheelGame({ members, myUserId, onAwardDistance, onClose 
   const tickRef = useRef<AudioContext | null>(null)
   const lastTickAngle = useRef(0)
 
-  const playTick = () => {
+  // Son tick avec fréquence variable selon vitesse
+  const playTick = (speedFactor: number = 1) => {
     try {
       if (!tickRef.current || tickRef.current.state === "closed") {
         tickRef.current = new ((window as any).AudioContext || (window as any).webkitAudioContext)()
       }
       const ctx = tickRef.current
-      if (!ctx) return
-      if (ctx.state === "suspended") ctx.resume()
-      const o = ctx.createOscillator()
-      const g = ctx.createGain()
-      o.connect(g); g.connect(ctx.destination)
-      o.type = "triangle"
-      o.frequency.value = 800
-      g.gain.setValueAtTime(0.12, ctx.currentTime)
-      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.04)
-      o.start(); o.stop(ctx.currentTime + 0.04)
-    } catch(e) {}
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      // Fréquence plus haute quand rapide, plus basse quand ralentit
+      const freq = 400 + speedFactor * 600
+      osc.type = "triangle"
+      osc.frequency.value = Math.min(freq, 1200)
+      gain.gain.setValueAtTime(0.18, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start(ctx.currentTime)
+      osc.stop(ctx.currentTime + 0.05)
+    } catch {}
   }
+
+  // Son de victoire
+  const playWin = () => {
+    try {
+      const AC = (window as any).AudioContext || (window as any).webkitAudioContext
+      const ctx = new AC()
+      const notes = [523, 659, 784, 1047]
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = "sine"
+        osc.frequency.value = freq
+        gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.12)
+        gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + i * 0.12 + 0.02)
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.25)
+        osc.connect(gain); gain.connect(ctx.destination)
+        osc.start(ctx.currentTime + i * 0.12)
+        osc.stop(ctx.currentTime + i * 0.12 + 0.3)
+      })
+      setTimeout(() => ctx.close(), 1000)
+    } catch {}
+  }
+
+  // Son de défaite
+  const playLose = () => {
+    try {
+      const AC = (window as any).AudioContext || (window as any).webkitAudioContext
+      const ctx = new AC()
+      const notes = [400, 300, 200]
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = "sawtooth"
+        osc.frequency.value = freq
+        gain.gain.setValueAtTime(0.2, ctx.currentTime + i * 0.15)
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.2)
+        osc.connect(gain); gain.connect(ctx.destination)
+        osc.start(ctx.currentTime + i * 0.15)
+        osc.stop(ctx.currentTime + i * 0.15 + 0.25)
+      })
+      setTimeout(() => ctx.close(), 1000)
+    } catch {}
+  }
+
 
   const playResult = () => {
     try {
@@ -460,7 +507,7 @@ export default function WheelGame({ members, myUserId, onAwardDistance, onClose 
 
   const spin = () => {
     if (spinning || spun) return
-    playTick()
+    playTick(Math.max(0, 1 - t))
     setSpinning(true)
     setResult(null)
 
@@ -479,8 +526,11 @@ export default function WheelGame({ members, myUserId, onAwardDistance, onClose 
       elapsed++
       const t = elapsed / DURATION
       // Ease out quart — fast start, smooth stop
-      const ease = 1 - Math.pow(t, 4)
-      const speed = (totalAngle / DURATION) * ease * 4
+      // Ralentissement réaliste: cubic ease-out avec micro-rebond à la fin
+      const ease = t < 0.85
+        ? 1 - Math.pow(t / 0.85, 3)
+        : (1 - t) / 0.15 * 0.04 // micro-oscillation finale
+      const speed = (totalAngle / DURATION) * ease * 4.2
       angleRef.current += speed
 
       // Tick sound when crossing a segment boundary
