@@ -351,7 +351,7 @@ export default function RPSGame({ members, myUserId, groupId, invite, onAwardDis
           ))}
         </div>
       </div>
-      <button onClick={() => { if(targetUserId) setPhaseSync("ready_p1") }} disabled={!targetUserId}
+      <button onClick={() => { if(targetUserId) { if(modeSelected === "invite") sendInvite(); else setPhaseSync("ready_p1") } }} disabled={!targetUserId}
         style={{ width:"100%", maxWidth:360, padding:"15px", borderRadius:14, border:"none", cursor:targetUserId?"pointer":"not-allowed", background:targetUserId?"linear-gradient(135deg,#a855f7,#ec4899)":"#2a2a3e", color:targetUserId?"#fff":"#6b7280", fontSize:15, fontWeight:700 }}>
         ✊ Commencer !
       </button>
