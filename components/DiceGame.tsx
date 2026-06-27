@@ -420,7 +420,15 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
     setPlayerRolls(resetRolls); setSelected(losers); setLocalTurn(0); setLosers([])
   }
 
-  const applyAndClose = () => { losers.forEach(id => onAwardDistance(id, -5)); onClose() }
+  const applyAndClose = () => {
+    losers.forEach(id => onAwardDistance(id, -5))
+    onClose()
+  }
+
+  const applyWithSound = (won: boolean) => {
+    if (won) playWin(); else playLose()
+    setTimeout(() => applyAndClose(), 400)
+  }
 
   const BG: any = { position:"fixed", inset:0, background:"#0a0a14", zIndex:400, display:"flex", flexDirection:"column", alignItems:"center", overflowY:"auto", padding:"24px 16px 40px" }
 
@@ -622,7 +630,7 @@ export default function DiceGame({ members, myUserId, groupId, invite, onAwardDi
             {isTie&&<button onClick={startTiebreak} style={{ flex:1, padding:"13px", borderRadius:13, border:"none", cursor:"pointer", background:"linear-gradient(135deg,#f59e0b,#d97706)", color:"#fff", fontSize:14, fontWeight:700 }}>🎲 Relancer</button>}
             <button onClick={() => { setPhase("setup"); setLosers([]); setTieRound(false); setPlayerRolls({}); setLocalTurn(0); setIsRolling(false); }}
               style={{ flex:1, padding:"13px", borderRadius:13, border:"1px solid #2a2a3e", cursor:"pointer", background:"#13131f", color:"#9ca3af", fontSize:14, fontWeight:700 }}>🔄 Rejouer</button>
-            <button onClick={applyAndClose} style={{ flex:2, padding:"13px", borderRadius:13, border:"none", cursor:"pointer", background:"linear-gradient(135deg,#a855f7,#ec4899)", color:"#fff", fontSize:14, fontWeight:700 }}>✅ Appliquer</button>
+            <button onClick={()=>applyWithSound(false)} style={{ flex:2, padding:"13px", borderRadius:13, border:"none", cursor:"pointer", background:"linear-gradient(135deg,var(--accent),var(--accent2))", color:"#fff", fontSize:14, fontWeight:700 }}>✅ Appliquer</button>
           </div>
         </div>
       </div>
