@@ -1,4 +1,38 @@
 "use client"
+
+function playWin() {
+  try {
+    const AC = (window as any).AudioContext || (window as any).webkitAudioContext
+    const ctx = new AC()
+    ;[523,659,784,1047].forEach((f,i)=>{
+      const o=ctx.createOscillator(),g=ctx.createGain()
+      o.type='sine'; o.frequency.value=f
+      g.gain.setValueAtTime(0,ctx.currentTime+i*0.12)
+      g.gain.linearRampToValueAtTime(0.3,ctx.currentTime+i*0.12+0.02)
+      g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.12+0.28)
+      o.connect(g);g.connect(ctx.destination)
+      o.start(ctx.currentTime+i*0.12);o.stop(ctx.currentTime+i*0.12+0.3)
+    })
+    setTimeout(()=>ctx.close(),1200)
+  } catch {}
+}
+
+function playLose() {
+  try {
+    const AC = (window as any).AudioContext || (window as any).webkitAudioContext
+    const ctx = new AC()
+    ;[350,280,210].forEach((f,i)=>{
+      const o=ctx.createOscillator(),g=ctx.createGain()
+      o.type='sawtooth'; o.frequency.value=f
+      g.gain.setValueAtTime(0.2,ctx.currentTime+i*0.18)
+      g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.18+0.22)
+      o.connect(g);g.connect(ctx.destination)
+      o.start(ctx.currentTime+i*0.18);o.stop(ctx.currentTime+i*0.18+0.25)
+    })
+    setTimeout(()=>ctx.close(),1000)
+  } catch {}
+}
+
 import { useState, useEffect, useRef } from "react"
 import { createClient } from "@/lib/supabase"
 
