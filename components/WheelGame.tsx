@@ -551,6 +551,7 @@ export default function WheelGame({ members, myUserId, onAwardDistance, onClose 
         setSpinning(false)
         setSpun(true)
         setResult(finalResult)
+        playWin()
         playResult()
 
         if (finalResult.needsTarget) {
