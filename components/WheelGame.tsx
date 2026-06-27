@@ -508,7 +508,7 @@ export default function WheelGame({ members, myUserId, onAwardDistance, onClose 
 
   const spin = () => {
     if (spinning || spun) return
-    playTick(Math.max(0, 1 - t))
+    playTick(1)
     setSpinning(true)
     setResult(null)
 
