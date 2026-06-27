@@ -429,6 +429,7 @@ export default function WheelGame({ members, myUserId, onAwardDistance, onClose 
         tickRef.current = new ((window as any).AudioContext || (window as any).webkitAudioContext)()
       }
       const ctx = tickRef.current
+      if (!ctx) return
       const osc = ctx.createOscillator()
       const gain = ctx.createGain()
       // Fréquence plus haute quand rapide, plus basse quand ralentit
