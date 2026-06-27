@@ -239,10 +239,6 @@ function GameView({
   const onTouchStart = (e: React.TouchEvent) => {
     if (!isMyTurn || throwing) return
     const pos = getTouchPos(e)
-    // Vérifier que le touch est près de la balle (zone bas de l'écran)
-    const rb = restBall()
-    const dist = Math.hypot(pos.x - rb.x, pos.y - rb.y)
-    if (dist > 80) return
     setDragging(true)
     setDragStart(pos)
     setDragCurrent(pos)
@@ -258,11 +254,11 @@ function GameView({
     if (!dragging || throwing) return
     setDragging(false)
     const pos = getTouchPos(e)
-    const rb = restBall()
-    const dx = pos.x - rb.x
-    const dy = pos.y - rb.y
-    // Swipe vers le haut seulement
-    if (dy > -30) return // pas assez de swipe vers le haut
+    // Direction basée sur le déplacement du doigt
+    const dx = pos.x - dragStart.x
+    const dy = pos.y - dragStart.y
+    // Swipe vers le haut requis
+    if (dy > -20) return
     launchBall(dx, -dy)
   }
 
@@ -445,29 +441,28 @@ function GameView({
       {dragging && aimAngle && !throwing && (
         <svg style={{position:'absolute',inset:0,zIndex:20,pointerEvents:'none'}}
           width="100%" height="100%">
-          {/* Ligne de visée */}
+          {/* Ligne de visée depuis le point de touch */}
           <line
-            x1={rb.x} y1={rb.y}
-            x2={rb.x - aimAngle.dx * 1.5}
-            y2={rb.y - aimAngle.dy * 1.5}
+            x1={dragStart.x} y1={dragStart.y}
+            x2={dragStart.x - aimAngle.dx * 1.5}
+            y2={dragStart.y - aimAngle.dy * 1.5}
             stroke="rgba(251,191,36,0.6)"
             strokeWidth="2"
             strokeDasharray="8,6"
             strokeLinecap="round"
           />
-          {/* Point de visée */}
           <circle
-            cx={rb.x - aimAngle.dx * 1.5}
-            cy={rb.y - aimAngle.dy * 1.5}
-            r="5"
-            fill="rgba(251,191,36,0.8)"
+            cx={dragStart.x - aimAngle.dx * 1.5}
+            cy={dragStart.y - aimAngle.dy * 1.5}
+            r="6"
+            fill="rgba(251,191,36,0.85)"
           />
           <circle
-            cx={rb.x - aimAngle.dx * 1.5}
-            cy={rb.y - aimAngle.dy * 1.5}
-            r="10"
+            cx={dragStart.x - aimAngle.dx * 1.5}
+            cy={dragStart.y - aimAngle.dy * 1.5}
+            r="14"
             fill="none"
-            stroke="rgba(251,191,36,0.4)"
+            stroke="rgba(251,191,36,0.35)"
             strokeWidth="1.5"
           />
         </svg>
