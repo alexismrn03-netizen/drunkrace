@@ -383,6 +383,8 @@ export default function BlindTest({ members, myUserId, groupId, onAwardDistance,
   const wasPlaying = useRef(false)
   const channelRef = useRef<any>(null)
   const lobbyPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const iframeRef = useRef<HTMLIFrameElement | null>(null)
+  const [musicStarted, setMusicStarted] = useState(false)
 
   const q = questions[qIndex]
   const catInfo = CATEGORIES.find(c => c.id === category)
@@ -497,7 +499,12 @@ export default function BlindTest({ members, myUserId, groupId, onAwardDistance,
       setFastestId(null)
       setListenTimer(10)
       setChooseTimer(10)
+      setMusicStarted(data.music_started || false)
       setPhase("listening")
+    }
+    // Quelqu'un a appuyé sur Play
+    if (data.music_started && phase === "listening" && !musicStarted) {
+      setMusicStarted(true)
     }
     // "choosing" géré localement par le timer de chaque client
     // if (data.status === "choosing") { setPhase("choosing") }
@@ -517,38 +524,50 @@ export default function BlindTest({ members, myUserId, groupId, onAwardDistance,
   // ── LANCER LA PARTIE (host) ──
   const startGame = async () => {
     const q0 = questions[0]
-    let ytId = ""
+    let vid = ""
     try {
       const res = await fetch(`/api/youtube-search?q=${encodeURIComponent(q0.title + " " + q0.artist + " official audio")}`)
       const d = await res.json()
-      ytId = d.id || ""
+      vid = d.id || ""
     } catch {}
 
-    // Sauvegarder les questions et lancer
     await supabase.from("blindtest_sessions").update({
       status: "listening",
       q_index: 0,
-      yt_id: ytId,
+      yt_id: vid,
       fastest_id: null,
       questions: questions,
+      music_started: false,
     }).eq("id", sessionId)
 
-    // Host passe directement en jeu
     clearInterval(lobbyPollRef.current!)
     setQIndex(0)
     setChoices(shuffle([q0.artist, ...q0.wrong]))
     setSelected(null)
-    setYtId(ytId)
+    setYtId(vid)
     setFastestId(null)
     setListenTimer(10)
     setChooseTimer(10)
+    setMusicStarted(false)
     setPhase("listening")
     subscribeToSession(sessionId)
   }
 
-  // ── TIMER ÉCOUTE (10s) — chaque client gère localement ──
+  // ── PLAY MUSIC (tout le monde peut appuyer) ──
+  const handlePlayMusic = async () => {
+    if (musicStarted) return
+    setMusicStarted(true)
+    // Sync pour que les autres sachent que la musique a démarré
+    await supabase.from("blindtest_sessions").update({ music_started: true }).eq("id", sessionId)
+    // Lancer l'iframe YouTube
+    if (iframeRef.current) {
+      iframeRef.current.src = iframeRef.current.src // force reload + autoplay
+    }
+  }
+
+  // ── TIMER ÉCOUTE (10s) — démarre seulement quand musicStarted = true ──
   useEffect(() => {
-    if (phase !== "listening") return
+    if (phase !== "listening" || !musicStarted) return
     clearInterval(timerRef.current!)
     let t = 10
     setListenTimer(10)
@@ -557,17 +576,20 @@ export default function BlindTest({ members, myUserId, groupId, onAwardDistance,
       setListenTimer(t)
       if (t <= 0) {
         clearInterval(timerRef.current!)
-        // Tout le monde passe à "choosing" localement
         setPhase("choosing")
         setChooseTimer(10)
-        // Le host met à jour le status en DB pour sync
         if (isHost) {
           supabase.from("blindtest_sessions").update({ status: "choosing" }).eq("id", sessionId)
         }
       }
     }, 1000)
     return () => clearInterval(timerRef.current!)
-  }, [phase, qIndex])
+  }, [phase, qIndex, musicStarted])
+
+  // Reset musicStarted à chaque nouvelle question
+  useEffect(() => {
+    if (phase === "listening") setMusicStarted(false)
+  }, [qIndex])
 
   // ── TIMER CHOIX (10s) — chaque client gère localement ──
   useEffect(() => {
@@ -814,18 +836,38 @@ export default function BlindTest({ members, myUserId, groupId, onAwardDistance,
           <style>{`@keyframes eq{from{height:4px}to{height:var(--h)}}`}</style>
         </div>
 
-        {/* YouTube player avec controls — autoplay sans interaction bloqué par navigateurs */}
-        {ytId ? (
-          <div style={{ width:"100%", marginTop:4 }}>
+        {/* Bouton Play + iframe YouTube cachée */}
+        <div style={{ marginTop:8, display:"flex", flexDirection:"column" as const, alignItems:"center", gap:8 }}>
+          {!musicStarted ? (
+            <button onClick={handlePlayMusic}
+              style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 28px",
+                borderRadius:50, border:"none", cursor:"pointer",
+                background:"linear-gradient(135deg,var(--accent),var(--accent2))",
+                boxShadow:`0 0 20px color-mix(in srgb, var(--accent) 40%, transparent)`,
+                color:"#fff", fontFamily:"'Bebas Neue',cursive", fontSize:18, letterSpacing:3 }}>
+              <span style={{ fontSize:22 }}>▶</span> LANCER LA MUSIQUE
+            </button>
+          ) : (
+            <div style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 20px",
+              background:"rgba(74,222,128,0.12)", borderRadius:50,
+              border:"1px solid rgba(74,222,128,0.3)" }}>
+              <span style={{ fontSize:16, animation:"pulse-dot 1s infinite" }}>🎵</span>
+              <span style={{ fontFamily:"'Bebas Neue',cursive", fontSize:14, letterSpacing:2, color:"#4ade80" }}>
+                EN COURS...
+              </span>
+            </div>
+          )}
+          {/* iframe YouTube cachée — taille 1x1, audio only */}
+          {ytId && (
             <iframe
-              src={`https://www.youtube.com/embed/${ytId}?autoplay=1&controls=1&start=30`}
-              style={{ width:"100%", height:58, borderRadius:12, border:"1px solid var(--border)" }}
+              ref={iframeRef}
+              src={musicStarted ? `https://www.youtube.com/embed/${ytId}?autoplay=1&controls=0&start=30` : "about:blank"}
+              style={{ width:1, height:1, opacity:0, position:"absolute" as const, pointerEvents:"none" as const }}
               allow="autoplay; encrypted-media"
             />
-          </div>
-        ) : (
-          <div style={{ fontSize:11, color:"#4b5563", marginTop:4 }}>🎵 Chargement...</div>
-        )}
+          )}
+        </div>
+        <style>{`@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:0.5}}`}</style>
       </div>
     </div>
   )
