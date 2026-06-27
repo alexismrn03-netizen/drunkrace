@@ -499,9 +499,8 @@ export default function BlindTest({ members, myUserId, groupId, onAwardDistance,
       setChooseTimer(10)
       setPhase("listening")
     }
-    if (data.status === "choosing") {
-      setPhase("choosing")
-    }
+    // "choosing" géré localement par le timer de chaque client
+    // if (data.status === "choosing") { setPhase("choosing") }
     if (data.status === "reveal") {
       setFastestId(data.fastest_id)
       setScores(data.scores || {})
@@ -547,40 +546,42 @@ export default function BlindTest({ members, myUserId, groupId, onAwardDistance,
     subscribeToSession(sessionId)
   }
 
-  // ── TIMER ÉCOUTE (10s) ──
+  // ── TIMER ÉCOUTE (10s) — chaque client gère localement ──
   useEffect(() => {
     if (phase !== "listening") return
     clearInterval(timerRef.current!)
+    let t = 10
+    setListenTimer(10)
     timerRef.current = setInterval(() => {
-      setListenTimer(t => {
-        if (t <= 1) {
-          clearInterval(timerRef.current!)
-          // Host passe à "choosing"
-          if (isHost) {
-            supabase.from("blindtest_sessions").update({ status: "choosing" }).eq("id", sessionId)
-          }
-          return 0
+      t--
+      setListenTimer(t)
+      if (t <= 0) {
+        clearInterval(timerRef.current!)
+        // Tout le monde passe à "choosing" localement
+        setPhase("choosing")
+        setChooseTimer(10)
+        // Le host met à jour le status en DB pour sync
+        if (isHost) {
+          supabase.from("blindtest_sessions").update({ status: "choosing" }).eq("id", sessionId)
         }
-        return t - 1
-      })
+      }
     }, 1000)
     return () => clearInterval(timerRef.current!)
   }, [phase, qIndex])
 
-  // ── TIMER CHOIX (10s) ──
+  // ── TIMER CHOIX (10s) — chaque client gère localement ──
   useEffect(() => {
     if (phase !== "choosing") return
     clearInterval(timerRef.current!)
+    let t = 10
+    setChooseTimer(10)
     timerRef.current = setInterval(() => {
-      setChooseTimer(t => {
-        if (t <= 1) {
-          clearInterval(timerRef.current!)
-          // Host calcule les résultats
-          if (isHost) revealResults()
-          return 0
-        }
-        return t - 1
-      })
+      t--
+      setChooseTimer(t)
+      if (t <= 0) {
+        clearInterval(timerRef.current!)
+        if (isHost) revealResults()
+      }
     }, 1000)
     return () => clearInterval(timerRef.current!)
   }, [phase])
