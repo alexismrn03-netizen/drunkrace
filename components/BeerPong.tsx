@@ -222,7 +222,7 @@ function GameView({
   const [throwing, setThrowing] = useState(false)
   const [showResult, setShowResult] = useState<'hit'|'miss'|null>(null)
 
-  const animRef = useRef<number>()
+  const animRef = useRef<number | undefined>(undefined)
 
   const W = () => containerRef.current?.offsetWidth || 360
   const H = () => containerRef.current?.offsetHeight || 580
